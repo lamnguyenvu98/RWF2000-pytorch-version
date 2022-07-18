@@ -12,7 +12,7 @@ SCHEDULER:
 SETTINGS:
   GPU: 1
   PRECISION: 16
+  RESUME: False
+  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/Main/checkpoints/last.ckpt'
   DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/rwf2000_npy'
   LOG_DIR: '/content/pcloud/RWF2000_Training/Main'
-  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/Main/checkpoints'
-  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/new_logs/checkpoints2/last.ckpt'
