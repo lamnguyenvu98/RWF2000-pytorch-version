@@ -128,6 +128,8 @@ class TrainingModel(LightningModule):
         self.test_metric_acc      = torchmetrics.Accuracy()
         self.val_cfm              = ConfusionMatrix()
         
+        self.save_hyperparameters()
+        
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
 
         self.model = FlowGatedNetwork()
@@ -137,7 +139,7 @@ class TrainingModel(LightningModule):
 
     def training_step(self, batch, batch_idx):
         X, y = batch
-        preds = self(X)
+        preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.train_metrics(preds.softmax(dim=-1), y)
         return {"loss": batch_loss}
@@ -156,7 +158,7 @@ class TrainingModel(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         X, y = batch
-        preds = self(X)
+        preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.val_metrics(preds.softmax(dim=-1), y)
         return {'batch_val_loss': batch_loss, 'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
@@ -179,7 +181,7 @@ class TrainingModel(LightningModule):
 
     def test_step(self, batch, batch_idx):
         X, y = batch
-        preds = self(X)
+        preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.test_metric_acc(preds.softmax(dim=-1), y)
         return {'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
