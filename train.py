@@ -13,6 +13,8 @@ ar = parser.parse_args()
 
 args = read_args(ar.config)
 
+seed_everything(42, workers=True)
+
 val_acc_callback = ModelCheckpoint(
     monitor = 'val_acc',
     dirpath = args.DIR.CHECKPOINT_DIR,
