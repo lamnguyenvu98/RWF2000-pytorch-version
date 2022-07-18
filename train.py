@@ -72,3 +72,6 @@ neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
 neptune_logger.log_hyperparams(params=dict(train_model.hparams))
 
 trainer.fit(train_model, datamodule=datamodule)
+
+run.stop()
+neptune_logger.finalize()
