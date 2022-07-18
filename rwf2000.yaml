@@ -1,0 +1,17 @@
+TRAIN:
+  BATCH_SIZE: 8
+  NUM_FRAMES: 64
+  ACCUMULATE_BATCH: 12
+  EPOCHS: 30
+  LEARNING_RATE: 0.001
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 1e-6
+SCHEDULER:
+  STEP_SIZE: 10
+  GAMMA: 0.7
+SETTINGS:
+  GPU: 1
+  PRECISION: 16
+  DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/rwf2000_npy'
+  LOG_DIR: '/content/pcloud/RWF2000_Training/Main'
+  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/Main/checkpoints'
