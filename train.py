@@ -32,7 +32,8 @@ last_ckp = ModelCheckpoint(
 # Initialize neptune AI
 run = neptune.init(
     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxODUwZmMzMC0yM2FiLTQ0MTctYTJkMi1hZmEzYzM5YWIwY2EifQ==",
-    project='lamnguyenvu/RWF2000', 
+    project='lamnguyenvu/RWF2000',
+    tags=['rwf2000', 'flow-gated-net', 'ver3', 'relu']
     # run='RWF-2' # This is to resume last run
 )
 
