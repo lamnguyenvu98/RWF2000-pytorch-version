@@ -9,14 +9,13 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', '-c', required=True, type=str, help="path to yaml config file")
-parser.add_argument('--resume', '-r', default=None, type=str, help='resume checkpoint to continue training process')
 ar = parser.parse_args()
 
 args = read_args(ar.config)
 
 val_acc_callback = ModelCheckpoint(
     monitor = 'val_acc',
-    dirpath = args.SETTINGS.CHECKPOINT_DIR,
+    dirpath = args.DIR.CHECKPOINT_DIR,
     filename = 'fgn-{epoch:02d}-{val_acc:.2f}-{train_acc:.2f}',
     every_n_epochs = 1,
     save_top_k = 3, # 4 best ckp based on val_acc
@@ -25,7 +24,7 @@ val_acc_callback = ModelCheckpoint(
 )
 
 last_ckp = ModelCheckpoint(
-    dirpath = args.SETTINGS.CHECKPOINT_DIR,
+    dirpath = args.DIR.CHECKPOINT_DIR,
     filename = "fgn-lastest-{epoch:02d}",
     every_n_epochs = 1
 )
@@ -50,7 +49,7 @@ train_model = TrainingModel(
     )
     
 datamodule = RWF2000DataModule(
-                dirpath = args.SETTINGS.DATA_DIR,
+                dirpath = args.DIR.DATA_DIR,
                 target_frames = args.TRAIN.NUM_FRAMES,
                 batch_size = args.TRAIN.BATCH_SIZE
             )
@@ -58,7 +57,7 @@ datamodule = RWF2000DataModule(
 trainer = Trainer(
     max_epochs=args.TRAIN.EPOCHS,
     gpus=args.SETTINGS.GPU,
-    default_root_dir=args.SETTINGS.LOG_DIR,
+    default_root_dir=args.DIR.LOG_DIR,
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
     callbacks=[val_acc_callback, last_ckp],
@@ -71,9 +70,9 @@ trainer = Trainer(
 # # log params
 neptune_logger.log_hyperparams(params=dict(train_model.hparams))
 
-if ar.resume is None:
-    trainer.fit(train_model, datamodule=datamodule)
+if args.SETTINGS.RESUME:
+    trainer.fit(train_model, datamodule=datamodule, ckpt_path=args.DIR.RESUME_CHECKPOINT)
 else:
-    trainer.fit(train_model, datamodule=datamodule, ckpt_path=ar.resume)
+    trainer.fit(train_model, datamodule=datamodule)
 
 run.stop()

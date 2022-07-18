@@ -13,6 +13,8 @@ SETTINGS:
   GPU: 1
   PRECISION: 16
   RESUME: False
-  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/Main/checkpoints/last.ckpt'
+DIR:
+  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/Main/checkpoints/last.ckpt'
+  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/Main/checkpoints/'
   DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/rwf2000_npy'
   LOG_DIR: '/content/pcloud/RWF2000_Training/Main'
