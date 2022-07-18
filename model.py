@@ -1,3 +1,4 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 import torchmetrics
@@ -130,6 +131,9 @@ class TrainingModel(LightningModule):
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
 
         self.model = FlowGatedNetwork()
+
+    def forward(self, x):
+      return self.model(x)
 
     def training_step(self, batch, batch_idx):
         X, y = batch

@@ -9,6 +9,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', '-c', required=True, type=str, help="path to yaml config file")
+parser.add_argument('--resume', '-r', default=None, type=str, help='resume checkpoint to continue training process')
 ar = parser.parse_args()
 
 args = read_args(ar.config)
@@ -47,6 +48,12 @@ train_model = TrainingModel(
     step_size = args.SCHEDULER.STEP_SIZE, 
     gamma = args.SCHEDULER.GAMMA
     )
+    
+datamodule = RWF2000DataModule(
+                dirpath = args.SETTINGS.DATA_DIR,
+                target_frames = args.TRAIN.NUM_FRAMES,
+                batch_size = args.TRAIN.BATCH_SIZE
+            )
 
 trainer = Trainer(
     max_epochs=args.TRAIN.EPOCHS,
@@ -57,21 +64,16 @@ trainer = Trainer(
     callbacks=[val_acc_callback, last_ckp],
     logger=neptune_logger
 )
-    
-datamodule = RWF2000DataModule(
-                dirpath = args.SETTINGS.DATA_DIR,
-                target_frames = args.TRAIN.NUM_FRAMES,
-                batch_size = args.TRAIN.BATCH_SIZE
-            )
-
 
 # log model summary
-neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
+# neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
 
 # # log params
 neptune_logger.log_hyperparams(params=dict(train_model.hparams))
 
-trainer.fit(train_model, datamodule=datamodule)
+if ar.resume is None:
+    trainer.fit(train_model, datamodule=datamodule)
+else:
+    trainer.fit(train_model, datamodule=datamodule, ckpt_path=ar.resume)
 
 run.stop()
-neptune_logger.finalize()
