@@ -73,10 +73,10 @@ class FlowGatedNetwork(nn.Module):
         )
 
     self.OptFlow_Network = nn.Sequential(
-            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='sigmoid'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='sigmoid'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='sigmoid'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='sigmoid')
+            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='relu'),
+            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
+            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
+            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu')
         )
 
     self.Fusion = Fusion()
@@ -142,7 +142,7 @@ class TrainingModel(LightningModule):
         preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.train_metrics(preds.softmax(dim=-1), y)
-        return {"loss": batch_loss}
+        return {'loss': batch_loss, 'acc': acc}
 
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()

@@ -100,12 +100,12 @@ def Save2Npy(file_dir: str, save_dir: str):
         # Get src 
         video_path = os.path.join(file_dir, v)
         # Get dest 
-        save_path = os.path.join(save_dir, video_name+'.npy') 
+        save_path = os.path.join(save_dir, video_name) 
         # Load and preprocess video
         data = Video2Npy(file_path=video_path, resize=(224,224))
         data = np.uint8(data)
         # Save as .npy file
-        np.save(save_path, data)
+        np.savez_compressed(save_path, data=data)
     
     return None
 
