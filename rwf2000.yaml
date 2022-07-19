@@ -14,7 +14,7 @@ SETTINGS:
   PRECISION: 16
   RESUME: False
 DIR:
-  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/Main/ver2/checkpoints/last.ckpt'
-  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/Main/ver2/checkpoints/'
+  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/log_ver3/checkpoints/last.ckpt'
+  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/log_ver3/checkpoints/'
   DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/rwf2000_npy'
-  LOG_DIR: '/content/pcloud/RWF2000_Training/Main/ver2'
+  LOG_DIR: '/content/pcloud/RWF2000_Training/log_ver3'

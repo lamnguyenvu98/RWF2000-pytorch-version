@@ -142,15 +142,16 @@ class TrainingModel(LightningModule):
         preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.train_metrics(preds.softmax(dim=-1), y)
-        return {'loss': batch_loss, 'acc': acc}
+        self.log("batch_acc", acc, prog_bar=True, logger=False)
+        return {'loss': batch_loss * self.trainer.accumulate_grad_batches}
 
     def training_epoch_end(self, outputs):
-        loss = torch.stack([x['loss'] for x in outputs]).mean()
+        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         mean_acc = self.train_metrics.compute()
         self.train_metrics.reset()
         lr = self.optimizers().param_groups[0]['lr']
         self.log("train_acc", mean_acc)
-        self.log("train_loss", loss)
+        self.log("train_loss", avg_loss)
         self.log("lr", lr)
         # self.logger.experiment.add_scalar("Loss/Train", loss, self.current_epoch)
         # self.logger.experiment.add_scalar("Acc/Train", mean_acc, self.current_epoch)
@@ -161,6 +162,8 @@ class TrainingModel(LightningModule):
         preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.val_metrics(preds.softmax(dim=-1), y)
+        self.log("val_b_loss", batch_loss, prog_bar=True, logger=False)
+        self.log("val_b_acc", acc, prog_bar=True, logger=False)
         return {'batch_val_loss': batch_loss, 'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
 
     def validation_epoch_end(self, outputs):
