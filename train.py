@@ -25,11 +25,11 @@ val_acc_callback = ModelCheckpoint(
     save_last=True
 )
 
-last_ckp = ModelCheckpoint(
-    dirpath = args.DIR.CHECKPOINT_DIR,
-    filename = "fgn-lastest-{epoch:02d}",
-    every_n_epochs = 1
-)
+# last_ckp = ModelCheckpoint(
+#     dirpath = args.DIR.CHECKPOINT_DIR,
+#     filename = "fgn-lastest-{epoch:02d}",
+#     every_n_epochs = 1
+# )
 
 # Initialize neptune AI
 run = neptune.init(
@@ -63,7 +63,7 @@ trainer = Trainer(
     default_root_dir=args.DIR.LOG_DIR,
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
-    callbacks=[val_acc_callback, last_ckp],
+    callbacks=[val_acc_callback],
     logger=neptune_logger
 )
 
@@ -77,5 +77,3 @@ if args.SETTINGS.RESUME:
     trainer.fit(train_model, datamodule=datamodule, ckpt_path=args.DIR.RESUME_CHECKPOINT)
 else:
     trainer.fit(train_model, datamodule=datamodule)
-
-run.stop()
