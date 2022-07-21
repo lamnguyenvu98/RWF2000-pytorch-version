@@ -34,9 +34,11 @@ class Conv3d_Block(nn.Module):
     self.activation = acts_fn.get(activation, nn.ReLU())
     
     self.Conv3DBlock = nn.Sequential(
-        nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=1, padding="same"),
+        nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=1, padding="same", bias=False),
+        nn.BatchNorm3d(out_channels),
         self.activation,
-        nn.Conv3d(out_channels, out_channels, kernel_size=(3, 1, 1), stride=1, padding="same"),
+        nn.Conv3d(out_channels, out_channels, kernel_size=(3, 1, 1), stride=1, padding="same", bias=False),
+        nn.BatchNorm3d(out_channels),
         self.activation,
         nn.MaxPool3d(pool_size)
       )  
@@ -106,8 +108,15 @@ class FlowGatedNetworkV2(nn.Module):
     self.attention = AttentionMechanism()
 
     self.conv2 = nn.Sequential(
-            nn.Conv2d(64, 64, (1, 1)),
-            nn.Conv2d(64, 128, (1, 1)),
+            nn.Conv2d(64, 64, kernel_size=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU()
+    )
+    
+    self.conv3 = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU()
     )
     
     self.maxpool2d = nn.MaxPool2d((4, 4))
@@ -115,6 +124,7 @@ class FlowGatedNetworkV2(nn.Module):
     self.FC = nn.Sequential(
             nn.Flatten(),
             nn.Linear(128, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(128, 32),
@@ -129,8 +139,9 @@ class FlowGatedNetworkV2(nn.Module):
       x = self.conv1(x)
       x = x.squeeze(dim=2)
       x = self.attention(x)
-      x = self.maxpool2d(x)
       x = self.conv2(x)
+      x = self.conv3(x)
+      x = self.maxpool2d(x)
       x = self.FC(x)
       print(x.shape)
       return x
