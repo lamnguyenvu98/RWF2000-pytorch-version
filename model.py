@@ -42,14 +42,14 @@ class Conv3d_Block(nn.Module):
       )  
     
     # Initialize kernel (he_normal)    
-    self.Conv3DBlock.apply(self.init_weights)
+    # self.Conv3DBlock.apply(self.init_weights)
   
   def forward(self, x):
     return self.Conv3DBlock(x)
   
-  def init_weights(self, m):
-    if isinstance(m, nn.Conv3d):
-      nn.init.kaiming_normal_(m.weight)
+  # def init_weights(self, m):
+  #   if isinstance(m, nn.Conv3d):
+  #     nn.init.kaiming_normal_(m.weight)
 
 # Layers that combine 2 output of RGB_Flow_Layer into one 
 # (using element wise matrix multiplication)
@@ -62,6 +62,79 @@ class Fusion(nn.Module):
     x = torch.mul(rgb, opt)
     return x
 
+class AttentionMechanism(nn.Module):
+  def __init__(self):
+     super().__init__()
+     self.alpha =  nn.Parameter(torch.zeros(1))
+     self.softmax = nn.Softmax(dim=-1)
+  
+  def forward(self, x):
+      x_vectorize = x.view(x.size(0), x.size(1), -1)
+      F = torch.bmm(x_vectorize, x_vectorize.permute(0, 2, 1))
+      scores = self.softmax(F)
+      value = torch.bmm(scores, x_vectorize)
+      value = value.view_as(x)
+      x = self.alpha * value + x
+      return x
+      
+
+class FlowGatedNetworkV2(nn.Module):
+  def __init__(self):
+    super(FlowGatedNetworkV2, self).__init__()
+        
+    self.RGB_Network = nn.Sequential(
+            Conv3d_Block(3, 16, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(16, 16, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(16, 32, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(32, 32, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(32, 32, pool_size=(2, 2, 2), activation='relu')
+        )
+
+    self.OptFlow_Network = nn.Sequential(
+            Conv3d_Block(2, 16, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(16, 16, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(16, 32, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(32, 32, pool_size=(2, 2, 2), activation='relu'),
+            Conv3d_Block(32, 32, pool_size=(2, 2, 2), activation='relu')
+        )
+
+    self.conv1 = nn.Sequential(
+            Conv3d_Block(64, 128, pool_size=(2, 1, 1), activation='relu'),
+            Conv3d_Block(128, 64, pool_size=(1, 1, 1), activation='relu')
+    )
+
+    self.attention = AttentionMechanism()
+
+    self.conv2 = nn.Sequential(
+            nn.Conv2d(64, 64, (1, 1)),
+            nn.Conv2d(64, 128, (1, 1)),
+    )
+    
+    self.maxpool2d = nn.MaxPool2d((4, 4))
+
+    self.FC = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, 32),
+            nn.ReLU(),
+            nn.Linear(32, 2),
+        )    
+    
+  def forward(self, x):
+      rgb = self.RGB_Network(x[:, :3, ...])
+      opt = self.OptFlow_Network(x[:, 3:, ...])
+      x = torch.concat([rgb, opt], dim=1)
+      x = self.conv1(x)
+      x = x.squeeze(dim=2)
+      x = self.attention(x)
+      x = self.maxpool2d(x)
+      x = self.conv2(x)
+      x = self.FC(x)
+      print(x.shape)
+      return x
+
 class FlowGatedNetwork(nn.Module):
   def __init__(self):
     super(FlowGatedNetwork, self).__init__()
@@ -69,14 +142,14 @@ class FlowGatedNetwork(nn.Module):
             Conv3d_Block(3, 16, pool_size=(1, 2, 2), activation='relu'),
             Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
             Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu')
+            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
         )
 
     self.OptFlow_Network = nn.Sequential(
             Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='relu'),
             Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
             Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu')
+            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
         )
 
     self.Fusion = Fusion()
@@ -132,10 +205,15 @@ class TrainingModel(LightningModule):
         
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
 
-        self.model = FlowGatedNetwork()
+        self.model = FlowGatedNetworkV2()
+        self.model.apply(self.init_weights)
 
     def forward(self, x):
       return self.model(x)
+
+    def init_weights(self, m):
+      if isinstance(m, nn.Conv3d) or isinstance(m, nn.Conv2d):
+          nn.init.kaiming_normal_(m.weight)
 
     def training_step(self, batch, batch_idx):
         X, y = batch
@@ -203,3 +281,11 @@ class TrainingModel(LightningModule):
         optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
         return [optimizer], [scheduler]
+
+if __name__ == '__main__':
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  dummy_input = torch.randn((1, 5, 64, 224, 224)).to(device)
+  model = FlowGatedNetworkV2().to(device)
+  # model(dummy_input)
+  train_model = TrainingModel()
+  train_model(dummy_input)
