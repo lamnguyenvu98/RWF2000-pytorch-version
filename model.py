@@ -121,7 +121,7 @@ class FlowGatedNetworkV2(nn.Module):
     
     self.maxpool2d = nn.MaxPool2d((4, 4))
 
-    self.FC = nn.Sequential(
+    self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(128, 128),
             nn.BatchNorm1d(128),
@@ -142,8 +142,7 @@ class FlowGatedNetworkV2(nn.Module):
       x = self.conv2(x)
       x = self.conv3(x)
       x = self.maxpool2d(x)
-      x = self.FC(x)
-      print(x.shape)
+      x = self.classifier(x)
       return x
 
 class FlowGatedNetwork(nn.Module):
@@ -193,7 +192,8 @@ class FlowGatedNetwork(nn.Module):
       return x
 
 class TrainingModel(LightningModule):
-    def __init__(self, lr: float = 0.001, 
+    def __init__(self, model,
+                 lr: float = 0.001, 
                  momentum: float = 0.9, 
                  weight_decay: float = 1e-6, 
                  step_size: int = 10, 
@@ -212,11 +212,11 @@ class TrainingModel(LightningModule):
         self.test_metric_acc      = torchmetrics.Accuracy()
         self.val_cfm              = ConfusionMatrix()
         
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['model'])
         
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
 
-        self.model = FlowGatedNetworkV2()
+        self.model = model
         self.model.apply(self.init_weights)
 
     def forward(self, x):
@@ -295,8 +295,8 @@ class TrainingModel(LightningModule):
 
 if __name__ == '__main__':
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  dummy_input = torch.randn((1, 5, 64, 224, 224)).to(device)
-  model = FlowGatedNetworkV2().to(device)
-  # model(dummy_input)
-  train_model = TrainingModel()
+  dummy_input = torch.randn((1, 5, 64, 224, 224))
+  model = FlowGatedNetworkV2()
+  model.eval()
+  train_model = TrainingModel(model=model)
   train_model(dummy_input)
