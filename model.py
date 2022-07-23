@@ -237,11 +237,11 @@ class TrainingModel(LightningModule):
     def training_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         mean_acc = self.train_metrics.compute()
-        self.train_metrics.reset()
         lr = self.optimizers().param_groups[0]['lr']
         self.log("train_acc", mean_acc)
         self.log("train_loss", avg_loss)
-        self.log("lr", lr)
+        self.log("lr", lr, prog_bar=True)
+        self.train_metrics.reset()
         # self.logger.experiment.add_scalar("Loss/Train", loss, self.current_epoch)
         # self.logger.experiment.add_scalar("Acc/Train", mean_acc, self.current_epoch)
         # self.logger.experiment.add_scalar("LearningRate", lr, self.current_epoch)
@@ -258,7 +258,6 @@ class TrainingModel(LightningModule):
     def validation_epoch_end(self, outputs):
         loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
         mean_acc = self.val_metrics.compute() 
-        self.val_metrics.reset()
         self.log("val_loss", loss)
         self.log("val_acc", mean_acc)
         if self.current_epoch % 2 == 0:
@@ -268,6 +267,7 @@ class TrainingModel(LightningModule):
             self.val_cfm(y_preds, y_true)
             self.val_cfm._plot()
             self.logger.experiment['ConfusionMatrix_E{}'.format(self.current_epoch)].upload(File.as_image(fig))
+        self.val_metrics.reset()
         # self.logger.experiment.add_scalar("Loss/Val", loss, self.current_epoch)
         # self.logger.experiment.add_scalar("Acc/Val", mean_acc, self.current_epoch)
 
@@ -284,9 +284,9 @@ class TrainingModel(LightningModule):
         y_preds = torch.cat([x['pred'] for x in outputs])
         result = cfm(y_preds, y_true)
         mean_acc = self.test_metric_acc.compute()
-        self.test_metric_acc.reset()
         self.log('test_acc', mean_acc)
-        return {'test_acc': mean_acc, 'cfm_object': cfm}
+        self.test_metric_acc.reset()
+        return {'test_acc': mean_acc}
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
