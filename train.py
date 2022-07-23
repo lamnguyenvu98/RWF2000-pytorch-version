@@ -43,13 +43,7 @@ neptune_logger = NeptuneLogger(
     run=run
 )
 
-if args.SETTINGS.ATTENTION:
-    model = FlowGatedNetworkV2()
-else:
-    model = FlowGatedNetwork()
-
 train_model = TrainingModel(
-    model=model,
     lr = args.TRAIN.LEARNING_RATE, 
     momentum = args.TRAIN.MOMENTUM, 
     weight_decay = args.TRAIN.WEIGHT_DECAY, 

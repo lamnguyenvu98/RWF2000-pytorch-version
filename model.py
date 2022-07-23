@@ -192,7 +192,7 @@ class FlowGatedNetwork(nn.Module):
       return x
 
 class TrainingModel(LightningModule):
-    def __init__(self, model,
+    def __init__(self,
                  lr: float = 0.001, 
                  momentum: float = 0.9, 
                  weight_decay: float = 1e-6, 
@@ -212,11 +212,11 @@ class TrainingModel(LightningModule):
         self.test_metric_acc      = torchmetrics.Accuracy()
         self.val_cfm              = ConfusionMatrix()
         
-        self.save_hyperparameters(ignore=['model'])
+        self.save_hyperparameters()
         
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
 
-        self.model = model
+        self.model = FlowGatedNetworkV2()
         self.model.apply(self.init_weights)
 
     def forward(self, x):
