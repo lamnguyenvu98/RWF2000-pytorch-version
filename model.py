@@ -200,6 +200,9 @@ class TrainingModel(LightningModule):
                  gamma: float = 0.7):
         super(TrainingModel, self).__init__()
         torch.backends.cudnn.benchmark = True
+        self.save_hyperparameters()
+        self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
+        
         self.lr                   = lr
         self.momentum             = momentum
         self.weight_decay         = weight_decay
@@ -212,11 +215,7 @@ class TrainingModel(LightningModule):
         self.test_metric_acc      = torchmetrics.Accuracy()
         self.val_cfm              = ConfusionMatrix()
         
-        self.save_hyperparameters()
-        
-        self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
-
-        self.model = FlowGatedNetworkV2()
+        self.model = FlowGatedNetwork()
         self.model.apply(self.init_weights)
 
     def forward(self, x):
@@ -228,7 +227,7 @@ class TrainingModel(LightningModule):
 
     def training_step(self, batch, batch_idx):
         X, y = batch
-        preds = self.model(X)
+        preds = self(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.train_metrics(preds.softmax(dim=-1), y)
         self.log("batch_acc", acc, prog_bar=True, logger=False)
@@ -248,7 +247,7 @@ class TrainingModel(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         X, y = batch
-        preds = self.model(X)
+        preds = self(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.val_metrics(preds.softmax(dim=-1), y)
         self.log("val_b_loss", batch_loss, prog_bar=True, logger=False)
@@ -273,7 +272,7 @@ class TrainingModel(LightningModule):
 
     def test_step(self, batch, batch_idx):
         X, y = batch
-        preds = self.model(X)
+        preds = self(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.test_metric_acc(preds.softmax(dim=-1), y)
         return {'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
@@ -289,14 +288,14 @@ class TrainingModel(LightningModule):
         return {'test_acc': mean_acc}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
         return [optimizer], [scheduler]
 
 if __name__ == '__main__':
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   dummy_input = torch.randn((1, 5, 64, 224, 224))
-  model = FlowGatedNetworkV2()
+  model = FlowGatedNetwork()
   model.eval()
   train_model = TrainingModel(model=model)
   train_model(dummy_input)
