@@ -193,7 +193,7 @@ class FlowGatedNetwork(nn.Module):
 
 class TrainingModel(LightningModule):
     def __init__(self,
-                 lr: float = 0.001, 
+                 learning_rate: float = 0.001, 
                  momentum: float = 0.9, 
                  weight_decay: float = 1e-6, 
                  step_size: int = 10, 
@@ -203,7 +203,7 @@ class TrainingModel(LightningModule):
         self.save_hyperparameters()
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
         
-        self.lr                   = lr
+        self.learning_rate        = learning_rate
         self.momentum             = momentum
         self.weight_decay         = weight_decay
         self.step_size            = step_size
@@ -288,7 +288,7 @@ class TrainingModel(LightningModule):
         return {'test_acc': mean_acc}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
         return [optimizer], [scheduler]
 
