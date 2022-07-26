@@ -71,16 +71,13 @@ class AttentionMechanism(nn.Module):
      self.softmax = nn.Softmax(dim=-1)
   
   def forward(self, x):
-      query = x.view(x.size(0), x.size(1), -1)
-      key = query.permute(0, 2, 1)
-      energy = torch.bmm(query, key)
-      energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
-      attention = self.softmax(energy_new)
-      value = x.view(x.size(0), x.size(1), -1)
-      out = torch.bmm(attention, value)
-      out = out.view_as(x)
-      out = self.alpha * out + x
-      return out
+      x_vectorize = x.view(x.size(0), x.size(1), -1)
+      F = torch.bmm(x_vectorize, x_vectorize.permute(0, 2, 1))
+      scores = self.softmax(F)
+      value = torch.bmm(scores, x_vectorize)
+      value = value.view_as(x)
+      x = self.alpha * value + x
+      return x
       
 
 class FlowGatedNetworkV2(nn.Module):
@@ -104,7 +101,7 @@ class FlowGatedNetworkV2(nn.Module):
         )
 
     self.conv1 = nn.Sequential(
-            Conv3d_Block(64, 128, pool_size=(2, 1, 1), activation='relu'),
+            Conv3d_Block(64, 128, pool_size=(4, 1, 1), activation='relu'),
             Conv3d_Block(128, 64, pool_size=(4, 1, 1), activation='relu'),
             Conv3d_Block(64, 32, pool_size=(4, 1, 1), activation='relu')
     )
@@ -112,7 +109,7 @@ class FlowGatedNetworkV2(nn.Module):
     self.attention = AttentionMechanism()
 
     self.conv2 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=1, bias=False),
+            nn.Conv2d(64, 64, kernel_size=1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU()
     )
@@ -123,31 +120,32 @@ class FlowGatedNetworkV2(nn.Module):
             nn.ReLU()
     )
     
-    # self.maxpool2d = nn.MaxPool2d((4, 4))
+    self.maxpool2d = nn.MaxPool2d((4, 4))
 
     self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(128 * 14 * 14, 1024),
-            nn.BatchNorm1d(1024),
+            nn.Linear(128, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(1024, 256),
+            nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(256, 2),
+            nn.Linear(32, 2),
         )    
     
   def forward(self, x):
       rgb = self.RGB_Network(x[:, :3, ...])
       opt = self.OptFlow_Network(x[:, 3:, ...])
+      
       x = torch.concat([rgb, opt], dim=1)
       x = self.conv1(x)
-      x = x.squeeze(dim=2)
-      x = self.attention(x)
-      x = self.conv2(x)
-      x = self.conv3(x)
-      # print(x.shape)
+      print(x.shape)
+      # x = x.squeeze(dim=2)
+      # x = self.attention(x)
+      # x = self.conv2(x)
+      # x = self.conv3(x)
       # x = self.maxpool2d(x)
-      x = self.classifier(x)
+      # x = self.classifier(x)
       return x
 
 class FlowGatedNetwork(nn.Module):
@@ -220,7 +218,7 @@ class TrainingModel(LightningModule):
         self.test_metric_acc      = torchmetrics.Accuracy()
         self.val_cfm              = ConfusionMatrix()
         
-        self.model = FlowGatedNetworkV2()
+        self.model = FlowGatedNetwork()
         self.model.apply(self.init_weights)
 
     def forward(self, x):
@@ -305,3 +303,5 @@ if __name__ == '__main__':
   model = FlowGatedNetworkV2()
   model.eval()
   model(dummy_input)
+  # train_model = TrainingModel()
+  # train_model(dummy_input)
