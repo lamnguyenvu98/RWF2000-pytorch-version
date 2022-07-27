@@ -19,6 +19,23 @@ class ConfusionMatrix():
     import seaborn as sns
     sns.heatmap(self.result, annot=True, fmt='g')
 
+class AttentionMechanism(nn.Module):
+  def __init__(self):
+     super().__init__()
+     self.alpha =  nn.Parameter(torch.zeros(1))
+     self.softmax = nn.Softmax(dim=-1)
+  
+  def forward(self, x):
+      query = x.view(x.size(0), x.size(1), -1)
+      key = query.permute(0, 2, 1)
+      energy = torch.bmm(query, key)
+      energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
+      attention = self.softmax(energy_new)
+      value = x.view(x.size(0), x.size(1), -1)
+      out = torch.bmm(attention, value)
+      out = out.view_as(x)
+      out = self.alpha * out + x
+      return out
 
 # Conv 3d Block
 # Weight initialize: kaiming normal
@@ -42,114 +59,11 @@ class Conv3d_Block(nn.Module):
         self.activation,
         nn.MaxPool3d(pool_size)
       )  
-    
-    # Initialize kernel (he_normal)    
-    # self.Conv3DBlock.apply(self.init_weights)
-  
+      
   def forward(self, x):
     return self.Conv3DBlock(x)
   
-  # def init_weights(self, m):
-  #   if isinstance(m, nn.Conv3d):
-  #     nn.init.kaiming_normal_(m.weight)
-
-# Layers that combine 2 output of RGB_Flow_Layer into one 
-# (using element wise matrix multiplication)
-class Fusion(nn.Module):
-  def __init__(self):
-    super(Fusion, self).__init__()
-    return None
-  def forward(self, x):
-    rgb, opt = x
-    x = torch.mul(rgb, opt)
-    return x
-
-class AttentionMechanism(nn.Module):
-  def __init__(self):
-     super().__init__()
-     self.alpha =  nn.Parameter(torch.zeros(1))
-     self.softmax = nn.Softmax(dim=-1)
-  
-  def forward(self, x):
-      query = x.view(x.size(0), x.size(1), -1)
-      key = query.permute(0, 2, 1)
-      energy = torch.bmm(query, key)
-      energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
-      attention = self.softmax(energy_new)
-      value = x.view(x.size(0), x.size(1), -1)
-      out = torch.bmm(attention, value)
-      out = out.view_as(x)
-      out = self.alpha * out + x
-      return out
       
-
-class FlowGatedNetworkV2(nn.Module):
-  def __init__(self):
-    super(FlowGatedNetworkV2, self).__init__()
-        
-    self.RGB_Network = nn.Sequential(
-            Conv3d_Block(3, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(2, 1, 1), activation='relu')
-        )
-
-    self.OptFlow_Network = nn.Sequential(
-            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(2, 1, 1), activation='relu')
-        )
-
-    self.conv1 = nn.Sequential(
-            Conv3d_Block(64, 128, pool_size=(2, 1, 1), activation='relu'),
-            Conv3d_Block(128, 64, pool_size=(4, 1, 1), activation='relu'),
-            Conv3d_Block(64, 32, pool_size=(4, 1, 1), activation='relu')
-    )
-
-    self.attention = AttentionMechanism()
-
-    self.conv2 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU()
-    )
-    
-    self.conv3 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.ReLU()
-    )
-    
-    # self.maxpool2d = nn.MaxPool2d((4, 4))
-
-    self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(128 * 14 * 14, 1024),
-            nn.BatchNorm1d(1024),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(1024, 256),
-            nn.ReLU(),
-            nn.Linear(256, 2),
-        )    
-    
-  def forward(self, x):
-      rgb = self.RGB_Network(x[:, :3, ...])
-      opt = self.OptFlow_Network(x[:, 3:, ...])
-      x = torch.concat([rgb, opt], dim=1)
-      x = self.conv1(x)
-      x = x.squeeze(dim=2)
-      x = self.attention(x)
-      x = self.conv2(x)
-      x = self.conv3(x)
-      # print(x.shape)
-      # x = self.maxpool2d(x)
-      x = self.classifier(x)
-      return x
-
 class FlowGatedNetwork(nn.Module):
   def __init__(self):
     super(FlowGatedNetwork, self).__init__()
@@ -161,13 +75,11 @@ class FlowGatedNetwork(nn.Module):
         )
 
     self.OptFlow_Network = nn.Sequential(
-            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
+            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='sigmoid'),
+            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='sigmoid'),
+            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='sigmoid'),
+            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='sigmoid'),
         )
-
-    self.Fusion = Fusion()
 
     self.MaxPool = nn.MaxPool3d((8, 1, 1))
 
@@ -190,7 +102,7 @@ class FlowGatedNetwork(nn.Module):
   def forward(self, x):
       rgb = self.RGB_Network(x[:, :3, ...])
       opt = self.OptFlow_Network(x[:, 3:, ...])
-      x = self.Fusion([rgb, opt])
+      x = torch.mul(rgb, opt)
       x = self.MaxPool(x)
       x = self.Merging(x)
       x = self.classifier(x)
@@ -220,14 +132,14 @@ class TrainingModel(LightningModule):
         self.test_metric_acc      = torchmetrics.Accuracy()
         self.val_cfm              = ConfusionMatrix()
         
-        self.model = FlowGatedNetworkV2()
+        self.model = FlowGatedNetwork()
         self.model.apply(self.init_weights)
 
     def forward(self, x):
       return self.model(x)
 
     def init_weights(self, m):
-      if isinstance(m, nn.Conv3d) or isinstance(m, nn.Conv2d):
+      if isinstance(m, nn.Conv3d):
           nn.init.kaiming_normal_(m.weight)
 
     def training_step(self, batch, batch_idx):
@@ -248,9 +160,6 @@ class TrainingModel(LightningModule):
         self.log("train_loss", avg_loss)
         self.log("lr", lr, prog_bar=True)
         self.train_metrics.reset()
-        # self.logger.experiment.add_scalar("Loss/Train", loss, self.current_epoch)
-        # self.logger.experiment.add_scalar("Acc/Train", mean_acc, self.current_epoch)
-        # self.logger.experiment.add_scalar("LearningRate", lr, self.current_epoch)
 
     def validation_step(self, batch, batch_idx):
         X, y = batch
@@ -266,16 +175,14 @@ class TrainingModel(LightningModule):
         mean_acc = self.val_metrics.compute() 
         self.log("val_loss", loss)
         self.log("val_acc", mean_acc)
-        if self.current_epoch % 2 == 0:
+        if self.current_epoch % 2 == 0 and self.current_epoch > 5:
             y_true = torch.cat([x['gt'] for x in outputs])
             y_preds = torch.cat([x['pred'] for x in outputs])
             fig = plt.figure()
             self.val_cfm(y_preds, y_true)
             self.val_cfm._plot()
-            self.logger.experiment['CFM/ConfusionMatrix_E{}'.format(self.current_epoch)].upload(File.as_image(fig))
+            self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
         self.val_metrics.reset()
-        # self.logger.experiment.add_scalar("Loss/Val", loss, self.current_epoch)
-        # self.logger.experiment.add_scalar("Acc/Val", mean_acc, self.current_epoch)
 
     def test_step(self, batch, batch_idx):
         X, y = batch
@@ -289,19 +196,21 @@ class TrainingModel(LightningModule):
         y_true = torch.cat([x['gt'] for x in outputs])
         y_preds = torch.cat([x['pred'] for x in outputs])
         result = cfm(y_preds, y_true)
+        cfm._plot()
+        plt.show()
         mean_acc = self.test_metric_acc.compute()
-        self.log('test_acc', mean_acc)
+        self.log('test_acc', mean_acc, logger=False)
         self.test_metric_acc.reset()
         return {'test_acc': mean_acc}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
         return [optimizer], [scheduler]
 
 if __name__ == '__main__':
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   dummy_input = torch.randn((1, 5, 64, 224, 224))
-  model = FlowGatedNetworkV2()
+  model = FlowGatedNetwork()
   model.eval()
   model(dummy_input)

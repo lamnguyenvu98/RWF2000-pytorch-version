@@ -3,7 +3,7 @@ TRAIN:
   NUM_FRAMES: 64
   ACCUMULATE_BATCH: 1
   EPOCHS: 30
-  LEARNING_RATE: 1.0e-3
+  LEARNING_RATE: 1.0e-2
   MOMENTUM: 9.0e-1
   WEIGHT_DECAY: 1.0e-6
 SCHEDULER:
@@ -14,7 +14,7 @@ SETTINGS:
   PRECISION: 16
   RESUME: False
 DIR:
-  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/log_ver3/checkpoints/last.ckpt'
-  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/log_ver3/checkpoints/'
+  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/last.ckpt'
+  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/'
   DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/rwf2000_npy'
-  LOG_DIR: '/content/pcloud/RWF2000_Training/log_ver3'
+  LOG_DIR: '/content/pcloud/RWF2000_Training/log_folder'
