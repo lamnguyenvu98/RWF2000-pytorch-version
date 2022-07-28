@@ -203,6 +203,9 @@ class TrainingModel(LightningModule):
         self.test_metric_acc.reset()
         return {'test_acc': mean_acc}
 
+    def on_epoch_start(self):
+       self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_lr()[0]
+
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
