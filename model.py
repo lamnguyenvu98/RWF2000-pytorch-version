@@ -175,7 +175,7 @@ class TrainingModel(LightningModule):
         mean_acc = self.val_metrics.compute() 
         self.log("val_loss", loss)
         self.log("val_acc", mean_acc)
-        if self.current_epoch % 2 == 0 and self.current_epoch > 5:
+        if self.current_epoch % 2 == 0:
             y_true = torch.cat([x['gt'] for x in outputs])
             y_preds = torch.cat([x['pred'] for x in outputs])
             fig = plt.figure()
