@@ -142,6 +142,9 @@ class TrainingModel(LightningModule):
       if isinstance(m, nn.Conv3d):
           nn.init.kaiming_normal_(m.weight)
 
+    def on_train_epoch_start(self):
+       self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_last_lr()[0]
+
     def training_step(self, batch, batch_idx):
         X, y = batch
         preds = self(X)
@@ -202,9 +205,6 @@ class TrainingModel(LightningModule):
         self.log('test_acc', mean_acc, logger=False)
         self.test_metric_acc.reset()
         return {'test_acc': mean_acc}
-
-    def on_epoch_start(self):
-       self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_lr()[0]
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
