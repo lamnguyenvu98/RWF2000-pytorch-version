@@ -142,8 +142,8 @@ class TrainingModel(LightningModule):
       if isinstance(m, nn.Conv3d):
           nn.init.kaiming_normal_(m.weight)
 
-    def on_train_epoch_start(self):
-       self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_last_lr()[0]
+    # def on_train_epoch_start(self):
+    #    self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_last_lr()[0]
 
     def training_step(self, batch, batch_idx):
         X, y = batch
