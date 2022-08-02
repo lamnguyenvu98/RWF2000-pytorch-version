@@ -208,7 +208,8 @@ class TrainingModel(LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[9,15], gamma=self.gamma)
         return [optimizer], [scheduler]
 
 if __name__ == '__main__':
