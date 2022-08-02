@@ -100,16 +100,18 @@ class RWF2000DataModule(LightningDataModule):
         self.batch_size = batch_size
 
     def prepare_data(self):
-        # Download 
+        # Download
         self.trainpath = os.path.join(self.dirpath, 'train')
         self.valpath = os.path.join(self.dirpath, 'val')
         self.tfms = {
         "train": transforms.Compose([
                     Color_Jitter(p=0.5),
-                    Random_Flip(p=0.5, axis=2), 
+                    Random_Flip(p=0.5, axis=2),
+                    DynamicCrop(),
                     Normalize(),
                     ToTensor() ]),
         "val": transforms.Compose([
+                    DynamicCrop(),
                     Normalize(),
                     ToTensor() ])
         }
