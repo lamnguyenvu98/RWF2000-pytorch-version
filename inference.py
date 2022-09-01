@@ -5,8 +5,9 @@ from model import TrainingModel
 from utils import preprocessing
 import torch
 from torchvision import transforms
-from augmentation import Normalize, ToTensor
+from Dataset.augmentation import Normalize, ToTensor
 import argparse
+from collections import deque
 
 parser  = argparse.ArgumentParser()
 parser.add_argument('--video', '-v', required=True, type=str, help='Path to video to predict')
@@ -28,7 +29,7 @@ tfms = transforms.Compose([
 
 classnames = ['Fight', 'NonFight']
 
-queue = []
+queue = deque(maxlen=64)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -43,7 +44,7 @@ while True:
 
     # Add the read frame to last and pop out the oldest one
     queue.append(frame)
-    queue.pop(0)
+    queue.popleft()
 
     res = deepcopy(queue)
     res = preprocessing(frames=res)
