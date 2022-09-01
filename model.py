@@ -177,6 +177,8 @@ class TrainingModel(LightningModule):
         self.train_metrics        = torchmetrics.Accuracy()
         self.val_metrics          = torchmetrics.Accuracy()
         self.test_metric_acc      = torchmetrics.Accuracy()
+        self._precision            = torchmetrics.Precision(num_classes=2, ignore_index=1)
+        self.recall               = torchmetrics.Recall(num_classes=2, ignore_index=1)
         self.val_cfm              = ConfusionMatrix()
         
         self.model = FlowGatedNetwork()
@@ -216,23 +218,36 @@ class TrainingModel(LightningModule):
         preds = self(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.val_metrics(preds.softmax(dim=-1), y)
+        precision = self._precision(preds.softmax(dim=-1), y)
+        recall = self.recall(preds.softmax(dim=-1), y)
         self.log("val_b_loss", batch_loss, prog_bar=True, logger=False)
         self.log("val_b_acc", acc, prog_bar=True, logger=False)
+        self.log("recall", recall, prog_bar=True, logger=False)
+        self.log("precision", precision, prog_bar=True, logger=False)
         return {'batch_val_loss': batch_loss, 'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
 
     def validation_epoch_end(self, outputs):
         loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
-        mean_acc = self.val_metrics.compute() 
+        mean_acc = self.val_metrics.compute()
+        mean_precision = self._precision.compute()
+        mean_recall = self.recall.compute()
         self.log("val_loss", loss)
         self.log("val_acc", mean_acc)
-        if self.current_epoch % 2 == 0:
-            y_true = torch.cat([x['gt'] for x in outputs])
-            y_preds = torch.cat([x['pred'] for x in outputs])
-            fig = plt.figure()
-            self.val_cfm(y_preds, y_true)
-            self.val_cfm._plot()
-            self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
+        self.log('precision', mean_precision)
+        self.log("recall", mean_recall)
+        
+        # Draw Confusion Matrix
+
+        y_true = torch.cat([x['gt'] for x in outputs])
+        y_preds = torch.cat([x['pred'] for x in outputs])
+        fig = plt.figure()
+        self.val_cfm(y_preds, y_true)
+        self.val_cfm._plot()
+        self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
+        
         self.val_metrics.reset()
+        self._precision.reset()
+        self.recall.reset()
 
     def test_step(self, batch, batch_idx):
         X, y = batch
