@@ -128,7 +128,7 @@ class FlowGatedNetwork(nn.Module):
 
     self.MaxPool = nn.MaxPool3d((8, 1, 1))
 
-    self.attention_mechanism = AttentionMechanism()
+    # self.attention_mechanism = AttentionMechanism()
 
     self.Merging = nn.Sequential(
             Conv3d_Block(32, 64, pool_size=(2, 2, 2), activation='relu'),
@@ -151,7 +151,7 @@ class FlowGatedNetwork(nn.Module):
       opt = self.OptFlow_Network(x[:, 3:, ...])
       x = torch.mul(rgb, opt)
       x = self.MaxPool(x)
-      x = self.attention_mechanism(x)
+      # x = self.attention_mechanism(x)
       x = self.Merging(x)
       x = self.classifier(x)
       return x
@@ -178,7 +178,7 @@ class TrainingModel(LightningModule):
         self.train_metrics        = torchmetrics.Accuracy()
         self.val_metrics          = torchmetrics.Accuracy()
         self.test_metric_acc      = torchmetrics.Accuracy()
-        self._precision            = torchmetrics.Precision(num_classes=2, ignore_index=1)
+        self._precision           = torchmetrics.Precision(num_classes=2, ignore_index=1)
         self.recall               = torchmetrics.Recall(num_classes=2, ignore_index=1)
         self.val_cfm              = ConfusionMatrix()
         
