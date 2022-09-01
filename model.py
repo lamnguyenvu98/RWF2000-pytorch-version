@@ -42,6 +42,45 @@ class AttentionMechanism(nn.Module):
     out = out.permute(0, 2, 1, 3, 4) # (N, C, T, H, W)
     return out
 
+class AdditiveScores(nn.Module):
+  def __init__(self, num_features) -> None:
+     super().__init__()
+     self.W = nn.Bilinear(num_features, num_features, 1)
+    
+  def forward(self, states, context):
+    '''
+    states: (N, T, num_features)
+    context: (N, num_features)
+    out: (N, T, 1)
+    '''
+    T = states.size(1)
+    context = context.unsqueeze(1).repeat(1, T, 1) # (N, T, num_features)
+    scores = self.W(states, context) # (N, T, 1)
+    return scores
+
+class ApplyAdditiveAttention(nn.Module):
+  def __init__(self) -> None:
+     super().__init__()
+     self.additive_score = AdditiveScores(num_features=6272)
+     self.softmax = nn.Softmax(dim=-1)
+  
+  def forward(self, x):
+    x_swap = x.permute(0, 2, 1, 3, 4)
+    states = x_swap.reshape(x_swap.size(0), x_swap.size(1), -1) # (N, T, num_features)
+    
+    context = torch.sum(states, dim=1) # (N, num_features)
+    
+    scores = self.additive_score(states, context) # (N, T, 1)
+    scores = self.softmax(scores)
+    
+    weighted = torch.multiply(states, scores) # (N, T, num_features)
+    
+    final_context = weighted + states
+    
+    final_context = final_context.view_as(x_swap)
+    final_context = final_context.permute(0, 2, 1, 3, 4)
+    return final_context
+
 # Conv 3d Block
 # Weight initialize: kaiming normal
 class Conv3d_Block(nn.Module):
@@ -88,7 +127,7 @@ class FlowGatedNetwork(nn.Module):
 
     self.MaxPool = nn.MaxPool3d((8, 1, 1))
 
-    self.attention_mechanism = AttentionMechanism()
+    self.attention_mechanism = ApplyAdditiveAttention()
 
     self.Merging = nn.Sequential(
             Conv3d_Block(32, 64, pool_size=(2, 2, 2), activation='relu'),
