@@ -1,4 +1,5 @@
 from turtle import forward
+from typing import Tuple
 import torch
 import torch.nn as nn
 import torchmetrics
@@ -33,8 +34,8 @@ class AttentionMechanism(nn.Module):
     query = _x.reshape(_x.size(0), _x.size(1), -1) # (N, T, C, H, W) => (N, T, C*H*W)
     key = query.permute(0, 2, 1) # (N, C*H*W, T)
     energy = torch.bmm(query, key) # (N, T, T)
-    # energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
-    attention = self.softmax(energy) # (N, T, T)
+    energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
+    attention = self.softmax(energy_new) # (N, T, T)
     value = _x.reshape(_x.size(0), _x.size(1), -1) # (N, T, C*H*W)
     out = torch.bmm(attention, value) # (N, T, C*H*W)
     out = out.view_as(_x) # (N, T, C, H, W)
@@ -47,7 +48,7 @@ class AdditiveScores(nn.Module):
      super().__init__()
      self.W = nn.Bilinear(num_features, num_features, 1)
     
-  def forward(self, states, context):
+  def forward(self, states: torch.Tensor, context: torch.Tensor) -> torch.Tensor:
     '''
     states: (N, T, num_features)
     context: (N, num_features)
@@ -64,7 +65,7 @@ class ApplyAdditiveAttention(nn.Module):
      self.additive_score = AdditiveScores(num_features=6272)
      self.softmax = nn.Softmax(dim=-1)
   
-  def forward(self, x):
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
     x_swap = x.permute(0, 2, 1, 3, 4)
     states = x_swap.reshape(x_swap.size(0), x_swap.size(1), -1) # (N, T, num_features)
     
@@ -84,7 +85,7 @@ class ApplyAdditiveAttention(nn.Module):
 # Conv 3d Block
 # Weight initialize: kaiming normal
 class Conv3d_Block(nn.Module):
-  def __init__(self, in_channels, out_channels, pool_size, activation='relu'):
+  def __init__(self, in_channels: int, out_channels: int, pool_size: Tuple = (1, 2, 2), activation: str = 'relu') -> torch.Tensor:
     super(Conv3d_Block, self).__init__()
 
     acts_fn = {
@@ -109,7 +110,7 @@ class Conv3d_Block(nn.Module):
   
       
 class FlowGatedNetwork(nn.Module):
-  def __init__(self):
+  def __init__(self) -> None:
     super(FlowGatedNetwork, self).__init__()
     self.RGB_Network = nn.Sequential(
             Conv3d_Block(3, 16, pool_size=(1, 2, 2), activation='relu'),
@@ -127,7 +128,7 @@ class FlowGatedNetwork(nn.Module):
 
     self.MaxPool = nn.MaxPool3d((8, 1, 1))
 
-    self.attention_mechanism = ApplyAdditiveAttention()
+    self.attention_mechanism = AttentionMechanism()
 
     self.Merging = nn.Sequential(
             Conv3d_Block(32, 64, pool_size=(2, 2, 2), activation='relu'),
@@ -145,7 +146,7 @@ class FlowGatedNetwork(nn.Module):
             nn.Linear(32, 2),
         )    
 
-  def forward(self, x):
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
       rgb = self.RGB_Network(x[:, :3, ...])
       opt = self.OptFlow_Network(x[:, 3:, ...])
       x = torch.mul(rgb, opt)
@@ -161,7 +162,7 @@ class TrainingModel(LightningModule):
                  momentum: float = 0.9, 
                  weight_decay: float = 1e-6, 
                  step_size: int = 10, 
-                 gamma: float = 0.7):
+                 gamma: float = 0.7) -> None:
         super(TrainingModel, self).__init__()
         torch.backends.cudnn.benchmark = True
         self.save_hyperparameters()
@@ -184,7 +185,7 @@ class TrainingModel(LightningModule):
         self.model = FlowGatedNetwork()
         self.model.apply(self.init_weights)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
       return self.model(x)
 
     def init_weights(self, m):
