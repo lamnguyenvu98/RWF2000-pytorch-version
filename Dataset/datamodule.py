@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from pytorch_lightning import LightningDataModule
-from augmentation import *
+from Dataset.augmentation import *
 
 class RWF2000(Dataset):
   def __init__(self, datapath, tfms, target_frames):

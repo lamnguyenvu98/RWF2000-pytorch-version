@@ -30,12 +30,12 @@ class AttentionMechanism(nn.Module):
     x: (N, C, T, H, W): (batch, channels, sequence-length, height, width)
     '''
     _x = x.permute(0, 2, 1, 3, 4) # (N, C, T, H, W) => (N, T, C, H, W)
-    query = _x.view(_x.size(0), _x.size(1), -1) # (N, T, C, H, W) => (N, T, C*H*W)
+    query = _x.reshape(_x.size(0), _x.size(1), -1) # (N, T, C, H, W) => (N, T, C*H*W)
     key = query.permute(0, 2, 1) # (N, C*H*W, T)
     energy = torch.bmm(query, key) # (N, T, T)
     # energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
     attention = self.softmax(energy) # (N, T, T)
-    value = _x.view(_x.size(0), _x.size(1), -1) # (N, T, C*H*W)
+    value = _x.reshape(_x.size(0), _x.size(1), -1) # (N, T, C*H*W)
     out = torch.bmm(attention, value) # (N, T, C*H*W)
     out = out.view_as(_x) # (N, T, C, H, W)
     out = self.alpha * out + _x # (N, T, C, H, W)
