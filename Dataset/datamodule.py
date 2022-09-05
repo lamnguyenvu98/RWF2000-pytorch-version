@@ -84,7 +84,7 @@ class RWF2000(Dataset):
 
   def load_data(self, path):
     # load the processed .npy files which have 5 channels (1-3 for RGB, 4-5 for optical flows)
-    data = np.load(path, mmap_mode='r')
+    data = np.load(path, mmap_mode='r')['data']
     data = np.float32(data)
     # sampling 64 frames uniformly from the entire video
     data = self.uniform_sampling(data)
