@@ -16,5 +16,5 @@ SETTINGS:
 DIR:
   RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/last.ckpt'
   CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/'
-  DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/rwf2000_npy'
+  DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/RWF2000-Build/'
   LOG_DIR: '/content/pcloud/RWF2000_Training/log_folder'
