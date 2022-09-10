@@ -120,10 +120,10 @@ class FlowGatedNetwork(nn.Module):
         )
 
     self.OptFlow_Network = nn.Sequential(
-            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
+            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='sigmoid'),
+            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='sigmoid'),
+            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='sigmoid'),
+            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='sigmoid'),
         )
 
     self.MaxPool = nn.MaxPool3d((8, 1, 1))
@@ -133,7 +133,7 @@ class FlowGatedNetwork(nn.Module):
     self.Merging = nn.Sequential(
             Conv3d_Block(32, 64, pool_size=(2, 2, 2), activation='relu'),
             Conv3d_Block(64, 64, pool_size=(2, 2, 2), activation='relu'),
-            Conv3d_Block(64, 128, pool_size=(2, 2, 2), activation='relu')
+            Conv3d_Block(64, 128, pool_size=(2, 3, 3), activation='relu')
         )
 
     self.classifier = nn.Sequential(
