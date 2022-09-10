@@ -103,10 +103,16 @@ class Conv3d_Block(nn.Module):
         nn.BatchNorm3d(out_channels),
         self.activation,
         nn.MaxPool3d(pool_size)
-      )  
+      )
+    
+    self.Conv3DBlock.apply(self.init_weights)
       
   def forward(self, x):
     return self.Conv3DBlock(x)
+  
+  def init_weights(self, m):
+    if isinstance(m, nn.Conv3d):
+      nn.init.kaiming_normal_(m.weight)
   
       
 class FlowGatedNetwork(nn.Module):
@@ -151,7 +157,6 @@ class FlowGatedNetwork(nn.Module):
       opt = self.OptFlow_Network(x[:, 3:, ...])
       x = torch.mul(rgb, opt)
       x = self.MaxPool(x)
-      # x = self.attention_mechanism(x)
       x = self.Merging(x)
       x = self.classifier(x)
       return x
@@ -183,14 +188,9 @@ class TrainingModel(LightningModule):
         self.val_cfm              = ConfusionMatrix()
         
         self.model = FlowGatedNetwork()
-        self.model.apply(self.init_weights)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
       return self.model(x)
-
-    def init_weights(self, m):
-      if isinstance(m, nn.Conv3d):
-          nn.init.kaiming_normal_(m.weight)
 
     def on_train_epoch_start(self):
        self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_last_lr()[0]
@@ -271,8 +271,8 @@ class TrainingModel(LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[9,15], gamma=self.gamma)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.step_size, gamma=self.gamma)
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[9,15], gamma=self.gamma)
         return [optimizer], [scheduler]
 
 if __name__ == '__main__':
