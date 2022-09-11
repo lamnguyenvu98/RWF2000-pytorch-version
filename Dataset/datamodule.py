@@ -111,7 +111,6 @@ class RWF2000DataModule(LightningDataModule):
                     Normalize(),
                     ToTensor() ]),
         "val": transforms.Compose([
-                    DynamicCrop(),
                     Normalize(),
                     ToTensor() ])
         }
