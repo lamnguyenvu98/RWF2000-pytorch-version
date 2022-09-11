@@ -105,7 +105,7 @@ class RWF2000DataModule(LightningDataModule):
         self.valpath = os.path.join(self.dirpath, 'val')
         self.tfms = {
         "train": transforms.Compose([
-                    Color_Jitter(p=0.5),
+                    Color_Jitter(),
                     Random_Flip(p=0.5, axis=2),
                     DynamicCrop(),
                     Normalize(),
