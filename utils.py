@@ -53,13 +53,9 @@ def dynamic_crop(video):
     # get the mean of x and y coordinates for better robustness
     x = int(np.mean(x_points))
     y = int(np.mean(y_points))
-    print('x-mean:', x)
-    print('y-mean:', y)
     # avoid to beyond boundaries of array
     x = max(56,min(x,167))
     y = max(56,min(y,167))
-    print('x:', x)
-    print('y:', y)
     # get cropped video 
     return video[:,x-56:x+56,y-56:y+56,:]
 
@@ -87,3 +83,24 @@ def preprocessing(frames, dynamic_crop=True):
         return crop_rs
     
     return result
+
+def uniform_sampling(video, target_frames=64):
+    # get total frames of input video and calculate sampling interval 
+    len_frames = int(len(video))
+    interval = int(np.ceil(len_frames / target_frames))
+    # init empty list for sampled video and 
+    sampled_video = []
+    for i in range(0,len_frames,interval):
+      sampled_video.append(video[i])     
+    # calculate numer of padded frames and fix it 
+    num_pad = target_frames - len(sampled_video)
+    padding = []
+    if num_pad>0:
+      for i in range(-num_pad,0):
+        try: 
+          padding.append(video[i])
+        except:
+          padding.append(video[0])
+      sampled_video += padding     
+    # get sampled video
+    return np.array(sampled_video, dtype=np.float32)
