@@ -38,7 +38,7 @@ class Color_Jitter():
     s_jitter = np.random.uniform(-0.2, 0.2)
     v_jitter = np.random.uniform(-30, 30)
     for i in range(len(data[..., :3])):
-      hsv = cv2.cvtColor(data[..., :3][i].astype(np.uint8), cv2.COLOR_RGB2HSV)
+      hsv = cv2.cvtColor(data[..., :3][i], cv2.COLOR_RGB2HSV)
       s = hsv[..., 1] + s_jitter
       v = hsv[..., 2] + v_jitter
       s[s < 0] = 0
