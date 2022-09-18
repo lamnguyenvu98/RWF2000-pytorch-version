@@ -1,4 +1,3 @@
-from turtle import forward
 from typing import Tuple
 import torch
 import torch.nn as nn
@@ -19,68 +18,6 @@ class ConfusionMatrix():
   def _plot(self):
     import seaborn as sns
     sns.heatmap(self.result, annot=True, fmt='g')
-
-class AttentionMechanism(nn.Module):
-  def __init__(self):
-    super().__init__()
-    self.alpha =  nn.Parameter(torch.zeros(1))
-    self.softmax = nn.Softmax(dim=-1)
-  
-  def forward(self, x):
-    '''
-    x: (N, C, T, H, W): (batch, channels, sequence-length, height, width)
-    '''
-    _x = x.permute(0, 2, 1, 3, 4) # (N, C, T, H, W) => (N, T, C, H, W)
-    query = _x.reshape(_x.size(0), _x.size(1), -1) # (N, T, C, H, W) => (N, T, C*H*W)
-    key = query.permute(0, 2, 1) # (N, C*H*W, T)
-    energy = torch.bmm(query, key) # (N, T, T)
-    energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
-    attention = self.softmax(energy_new) # (N, T, T)
-    value = _x.reshape(_x.size(0), _x.size(1), -1) # (N, T, C*H*W)
-    out = torch.bmm(attention, value) # (N, T, C*H*W)
-    out = out.view_as(_x) # (N, T, C, H, W)
-    out = self.alpha * out + _x # (N, T, C, H, W)
-    out = out.permute(0, 2, 1, 3, 4) # (N, C, T, H, W)
-    return out
-
-class AdditiveScores(nn.Module):
-  def __init__(self, num_features) -> None:
-     super().__init__()
-     self.W = nn.Bilinear(num_features, num_features, 1)
-    
-  def forward(self, states: torch.Tensor, context: torch.Tensor) -> torch.Tensor:
-    '''
-    states: (N, T, num_features)
-    context: (N, num_features)
-    out: (N, T, 1)
-    '''
-    T = states.size(1)
-    context = context.unsqueeze(1).repeat(1, T, 1) # (N, T, num_features)
-    scores = self.W(states, context) # (N, T, 1)
-    return scores
-
-class ApplyAdditiveAttention(nn.Module):
-  def __init__(self) -> None:
-     super().__init__()
-     self.additive_score = AdditiveScores(num_features=6272)
-     self.softmax = nn.Softmax(dim=-1)
-  
-  def forward(self, x: torch.Tensor) -> torch.Tensor:
-    x_swap = x.permute(0, 2, 1, 3, 4)
-    states = x_swap.reshape(x_swap.size(0), x_swap.size(1), -1) # (N, T, num_features)
-    
-    context = torch.sum(states, dim=1) # (N, num_features)
-    
-    scores = self.additive_score(states, context) # (N, T, 1)
-    scores = self.softmax(scores)
-    
-    weighted = torch.multiply(states, scores) # (N, T, num_features)
-    
-    final_context = weighted + states
-    
-    final_context = final_context.view_as(x_swap)
-    final_context = final_context.permute(0, 2, 1, 3, 4)
-    return final_context
 
 # Conv 3d Block
 # Weight initialize: kaiming normal

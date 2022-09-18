@@ -44,7 +44,7 @@ neptune_logger = NeptuneLogger(
 )
 
 train_model = TrainingModel(
-    lr = args.TRAIN.LEARNING_RATE, 
+    learning_rate = args.TRAIN.LEARNING_RATE, 
     momentum = args.TRAIN.MOMENTUM, 
     weight_decay = args.TRAIN.WEIGHT_DECAY, 
     step_size = args.SCHEDULER.STEP_SIZE, 
