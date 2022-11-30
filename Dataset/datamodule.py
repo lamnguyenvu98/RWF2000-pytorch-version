@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from pytorch_lightning import LightningDataModule
-from Dataset.augmentation import *
+from augmentation import *
 
 class RWF2000(Dataset):
   def __init__(self, datapath, tfms, target_frames):
@@ -55,6 +55,56 @@ class RWF2000(Dataset):
       sampled_video += padding     
     # get sampled video
     return np.array(sampled_video, dtype=np.float32)
+  
+  def dynamic_sampling(self, video):
+    gradient_frames = np.zeros((video[0], video[1], video[2]))
+    
+    # convert rgb to gray and calculate gradient
+    for i in range(len(video)):
+      gray = cv2.cvtColor(video[i, ..., :3], cv2.COLOR_BGR2GRAY)
+      # calculate gradient
+      gX = cv2.Sobel(gray, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=3)
+      gY = cv2.Sobel(gray, ddepth=cv2.CV_32F, dx=0, dy=1, ksize=3)
+      # the gradient magnitude images are now of the floating point data
+      # type, so we need to take care to convert them back a to unsigned
+      # 8-bit integer representation so other OpenCV functions can operate
+      # on them and visualize them
+      gX = cv2.convertScaleAbs(gX)
+      gY = cv2.convertScaleAbs(gY)
+      # combine the gradient representations into a single image
+      gradient_frames[i] = cv2.addWeighted(gX, 0.5, gY, 0.5, 0)
+    
+    # calculate absolute different
+    abs_diff_frames = np.zeros_like(gradient_frames)
+
+    # p_thresh = 100
+
+    for i in range(0, len(gradient_frames)):
+      if i == 0:
+          abs_diff_frames[i] = np.zeros_like(gradient_frames[i])
+      else:
+          abs_diff_frames[i] = np.abs(gradient_frames[i] - gradient_frames[i - 1])
+    
+    # Compute energy
+    energy = list()
+    energy_thresh = 50
+
+    for i in range(len(abs_diff_frames)):
+      energy_each_frame = np.sum(abs_diff_frames[i])
+      energy.append(energy_each_frame)
+
+    energy = np.array(energy)
+    
+    max_energy = -9999999
+    max_id = -1
+    
+    for i in range(len(energy) - self.target_frames + 1):
+      energy_cal_window = np.sum(energy[i:i+self.target_frames])
+      if max_energy < energy_cal_window:
+          max_energy = energy_cal_window
+          max_id = i
+    
+    return video[max_id:max_id + self.target_frames, ...]
 
   def search_data(self, datapath):
     X_path = []
@@ -158,4 +208,26 @@ class RWF2000DataModule(LightningDataModule):
             pin_memory = True,
             drop_last = False,
             collate_fn = self.val.collate_fn
-        ) 
+        )
+
+if __name__ == '__main__':
+  tfms = transforms.Compose([
+                    DynamicCrop(),
+                    Color_Jitter(),
+                    Random_Flip(p=0.5, axis=2),
+                    # Normalize(),
+                    ToTensor()
+                ])
+  
+  image = np.load('/home/pep/drive/PCLOUD/Dataset/RWF2000_Dataset/RWF2000-Build/val/Fight/39BFeYnbu-I_2.npz', mmap_mode='r')['data']
+  
+  result = tfms(image)
+  result = result.numpy()
+  for i in range(len(result)):
+    im = result[i, ..., :3].astype(np.uint8)
+    cv2.imshow("result", im)
+    if cv2.waitKey(0) == 27: break
+  
+  cv2.destroyAllWindows()
+  
+  

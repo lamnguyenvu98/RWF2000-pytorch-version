@@ -37,7 +37,7 @@ def Video2Npy(file_path: str, resize: Tuple = (224, 224)):
     # Get the optical flow of video
     flows = getOpticalFlow(frames)
     
-    result = np.zeros((len(flows),224,224,5))
+    result = np.zeros((len(flows),224, 224, 5))
     result[...,:3] = frames
     result[...,3:] = flows
     

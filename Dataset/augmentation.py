@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.nn.functional import interpolate
 import cv2
 
 class Normalize():
@@ -79,13 +80,19 @@ class DynamicCrop():
       y = max(56,min(y,167))
       # get cropped video
       crop = video[:,x-56:x+56,y-56:y+56,:]
-      crop_rs = np.zeros((crop.shape[0], 224, 224, 5))
-      for i in range(crop.shape[0]):
-          crop_rs[i] = cv2.resize(crop[i], self.size)
-      return crop_rs
+      crop_result = np.zeros((crop.shape[0], *self.size, crop.shape[-1]))
+      # resize back to (224, 224)
+      for i in range(len(video)):
+        crop_result[i] = cv2.resize(crop[i], self.size)
+      return crop_result.astype(np.uint8)
+      # crop_rs = interpolate(torch.tensor(crop.copy()).permute(0, 3, 1, 2), self.size)
+      
+      
+      # return crop_rs.permute(0, 2, 3, 1).numpy()
 
 class ToTensor():
   def __call__(self, data):
+    if isinstance(data, torch.Tensor): return data
     assert isinstance(data, np.ndarray), 'Input data should be a numpy array'
     return torch.tensor(data.copy())
 
