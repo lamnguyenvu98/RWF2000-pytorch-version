@@ -117,11 +117,11 @@ class TrainingModel(LightningModule):
         self.gamma                = gamma
         
         self.loss_function        = nn.CrossEntropyLoss()
-        self.train_metrics        = torchmetrics.Accuracy()
-        self.val_metrics          = torchmetrics.Accuracy()
-        self.test_metric_acc      = torchmetrics.Accuracy()
-        self._precision           = torchmetrics.Precision(num_classes=2, ignore_index=1)
-        self.recall               = torchmetrics.Recall(num_classes=2, ignore_index=1)
+        self.train_metrics        = torchmetrics.Accuracy(num_classes=2, task="multiclass")
+        self.val_metrics          = torchmetrics.Accuracy(num_classes=2, task="multiclass")
+        self.test_metric_acc      = torchmetrics.Accuracy(num_classes=2, task="multiclass")
+        self._precision           = torchmetrics.Precision(num_classes=2, task="multiclass", ignore_index=1)
+        self.recall               = torchmetrics.Recall(num_classes=2, task="multiclass", ignore_index=1)
         self.val_cfm              = ConfusionMatrix()
         
         self.model = FlowGatedNetwork()
