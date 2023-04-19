@@ -11,7 +11,7 @@ from collections import deque
 
 parser  = argparse.ArgumentParser()
 parser.add_argument('--video', '-v', required=True, type=str, help='Path to video to predict')
-parser.add_argument('--dir', '-d', default='results/result.mp4', type=str, help='Path to write result')
+parser.add_argument('--save-dir', '-d', default='results/result.mp4', type=str, help='Path to write result')
 parser.add_argument('--checkpoints', '-c', required=True, type=str, help='Path to checkpoint')
 args = parser.parse_args()
 
@@ -21,7 +21,7 @@ cap = cv2.VideoCapture(args.video)
 fps = cap.get(cv2.CAP_PROP_FPS)
 size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-videoWriter = cv2.VideoWriter(args.dir, fourcc, fps, size)
+videoWriter = cv2.VideoWriter(args.save_dir, fourcc, fps, size)
 
 tfms = transforms.Compose([
                     Normalize(),
