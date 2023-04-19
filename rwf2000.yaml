@@ -9,10 +9,19 @@ TRAIN:
 SCHEDULER:
   STEP_SIZE: 10
   GAMMA: 7.0e-1
+VALIDATION:
+  SAVE_LAST: True
+  TOP_K: 3
+
 SETTINGS:
   GPU: 1
   PRECISION: 16
   RESUME: False
+NEPTUNE_LOGGER:
+  API_TOKEN:
+  PROJECT:
+  WITH_ID:
+  TAGS:
 DIR:
   RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/last.ckpt'
   CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/'

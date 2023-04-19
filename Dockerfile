@@ -1,6 +1,6 @@
 FROM python:3.9.15-bullseye
-# FROM nvcr.io/nvidia/pytorch:21.04-py3
-FROM pytorch/torchserve:0.6.0-cpu
+FROM nvcr.io/nvidia/pytorch:21.04-py3
+FROM pytorch/torchserve:0.6.0-gpu
 
 WORKDIR /app
 

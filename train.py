@@ -1,9 +1,9 @@
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import NeptuneLogger
-from datamodule import RWF2000DataModule
+from dataset.datamodule import RWF2000DataModule
 import neptune.new as neptune
-from model import FlowGatedNetwork, FlowGatedNetworkV2, TrainingModel
+from model import FGN
 from config import read_args
 import argparse
 
@@ -20,9 +20,9 @@ val_acc_callback = ModelCheckpoint(
     dirpath = args.DIR.CHECKPOINT_DIR,
     filename = 'fgn-{epoch:02d}-{val_acc:.2f}-{train_acc:.2f}',
     every_n_epochs = 1,
-    save_top_k = 3, # 4 best ckp based on val_acc
+    save_top_k = args.VALIDATION.TOP_K, # 4 best ckp based on val_acc
     mode = "max",
-    save_last=True
+    save_last=args.VALIDATION.SAVE_LAST
 )
 
 # last_ckp = ModelCheckpoint(
@@ -31,19 +31,23 @@ val_acc_callback = ModelCheckpoint(
 #     every_n_epochs = 1
 # )
 
-# Initialize neptune AI
-run = neptune.init(
-    api_token="#",
-    project='lamnguyenvu/RWF2000',
-    tags=['rwf2000', 'flow-gated-net', 'ver3', 'relu']
-    # run='RWF-2' # This is to resume last run
-)
+if not args.NEPTUNE_LOGGER.API_TOKEN or not args.NEPTUNE_LOGGER.PROJECT:
+    # Initialize neptune AI
+    run = neptune.init_run(
+        api_token=args.NEPTUNE_LOGGER.API_TOKEN,
+        project=args.NEPTUNE_LOGGER.PROJECT,
+        tags=args.NEPTUNE_LOGGER.TAGS,
+        with_id=args.NEPTUNE_LOGGER.WITH_ID # This is to resume last run
+    )
 
-neptune_logger = NeptuneLogger(
-    run=run
-)
+    logger = NeptuneLogger(
+        run=run
+    )
 
-train_model = TrainingModel(
+else:
+    logger = False
+
+train_model = FGN(
     learning_rate = args.TRAIN.LEARNING_RATE, 
     momentum = args.TRAIN.MOMENTUM, 
     weight_decay = args.TRAIN.WEIGHT_DECAY, 
@@ -64,14 +68,14 @@ trainer = Trainer(
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
     callbacks=[val_acc_callback],
-    logger=neptune_logger
+    logger=logger
 )
 
 # log model summary
 # neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
 
 # # log params
-neptune_logger.log_hyperparams(params=dict(train_model.hparams))
+logger.log_hyperparams(params=dict(train_model.hparams))
 
 if args.SETTINGS.RESUME:
     trainer.fit(train_model, datamodule=datamodule, ckpt_path=args.DIR.RESUME_CHECKPOINT)

@@ -1,11 +1,11 @@
 from copy import deepcopy
 import cv2
 import numpy as np
-from model import TrainingModel
+from model import FGN
 from utils import preprocessing
 import torch
 from torchvision import transforms
-from Dataset.augmentation import Normalize, ToTensor
+from dataset.augmentation import Normalize, ToTensor
 import argparse
 from collections import deque
 
@@ -33,7 +33,7 @@ queue = deque(maxlen=64)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = TrainingModel().load_from_checkpoint(args.checkpoints).to(device)
+model = FGN().load_from_checkpoint(args.checkpoints).to(device)
 
 while True:
     ret, frame = cap.read()

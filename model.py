@@ -50,6 +50,9 @@ class Conv3d_Block(nn.Module):
   def init_weights(self, m):
     if isinstance(m, nn.Conv3d):
       nn.init.kaiming_normal_(m.weight)
+    elif isinstance(m, nn.BatchNorm3d):
+      m.weight.data.fill_(1)
+      m.bias.data.zero_()
   
       
 class FlowGatedNetwork(nn.Module):
@@ -74,20 +77,24 @@ class FlowGatedNetwork(nn.Module):
     # self.attention_mechanism = AttentionMechanism()
 
     self.Merging = nn.Sequential(
-            Conv3d_Block(32, 64, pool_size=(2, 2, 2), activation='relu'),
-            Conv3d_Block(64, 64, pool_size=(2, 2, 2), activation='relu'),
-            Conv3d_Block(64, 128, pool_size=(2, 3, 3), activation='relu')
+            Conv3d_Block(32, 64, pool_size=(2, 1, 1), activation='relu'),
+            Conv3d_Block(64, 64, pool_size=(2, 1, 1), activation='relu'),
+            Conv3d_Block(64, 128, pool_size=(2, 1, 1), activation='relu'),
         )
-
-    self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(128, 32),
-            nn.ReLU(),
-            nn.Linear(32, 2),
-        )    
+    
+    self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
+    
+    self.fc = nn.Linear(128, 2)
+    
+    # self.classifier = nn.Sequential(
+    #         nn.Flatten(),
+    #         nn.Linear(128, 128),
+    #         nn.ReLU(),
+    #         nn.Dropout(0.2),
+    #         nn.Linear(128, 32),
+    #         nn.ReLU(),
+    #         nn.Linear(32, 2),
+    #     )    
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
       rgb = self.RGB_Network(x[:, :3, ...])
@@ -95,17 +102,22 @@ class FlowGatedNetwork(nn.Module):
       x = torch.mul(rgb, opt)
       x = self.MaxPool(x)
       x = self.Merging(x)
-      x = self.classifier(x)
-      return x
+      # x = x.squeeze(2)
+      x = self.global_avg_pool(x)
+      # print(x.shape)
+      # x = self.classifier(x)
+      x = x.flatten(start_dim=1)
+      x = self.fc(x)
+      return x.view(x.size(0), -1)
 
-class TrainingModel(LightningModule):
+class FGN(LightningModule):
     def __init__(self,
                  learning_rate: float = 0.001, 
                  momentum: float = 0.9, 
                  weight_decay: float = 1e-6, 
                  step_size: int = 10, 
                  gamma: float = 0.7) -> None:
-        super(TrainingModel, self).__init__()
+        super(FGN, self).__init__()
         torch.backends.cudnn.benchmark = True
         self.save_hyperparameters()
         self.example_input_array  = torch.randn((1, 5, 64, 224, 224))
@@ -213,8 +225,15 @@ class TrainingModel(LightningModule):
         return [optimizer], [scheduler]
 
 if __name__ == '__main__':
+  ckp_path = 'model_dir/best.ckpt'
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  dummy_input = torch.randn((1, 5, 64, 224, 224))
+  # dummy_input = torch.randn((1, 5, 64, 224, 224))
   model = FlowGatedNetwork()
-  model.eval()
-  model(dummy_input)
+  trained_ckp = torch.load(ckp_path, map_location='cpu')['state_dict']
+  model_ckp = model.state_dict()
+  for k, v in model_ckp.items():
+    model_ckp[k] = trained_ckp['model.' + k]
+  model.load_state_dict(model_ckp)
+  # model.eval()
+  # out = model(dummy_input)
+  # print(out.shape)
