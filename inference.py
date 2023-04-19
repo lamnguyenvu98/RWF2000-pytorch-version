@@ -12,7 +12,7 @@ from collections import deque
 parser  = argparse.ArgumentParser()
 parser.add_argument('--video', '-v', required=True, type=str, help='Path to video to predict')
 parser.add_argument('--save-dir', '-d', default='results/result.mp4', type=str, help='Path to write result')
-parser.add_argument('--checkpoints', '-c', required=True, type=str, help='Path to checkpoint')
+parser.add_argument('--checkpoint', '-c', required=True, type=str, help='Path to checkpoint')
 args = parser.parse_args()
 
 cap = cv2.VideoCapture(args.video)
@@ -33,7 +33,7 @@ queue = deque(maxlen=64)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = FGN().load_from_checkpoint(args.checkpoints).to(device)
+model = FGN().load_from_checkpoint(args.checkpoint).to(device)
 
 while True:
     ret, frame = cap.read()
