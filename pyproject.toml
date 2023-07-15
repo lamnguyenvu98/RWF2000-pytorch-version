@@ -10,6 +10,10 @@ authors = [
 ]
 description = "Unofficial Implementation of Flow Gated Network. This network was trained on RWF2000 dataset"
 requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
 where=["src"]
