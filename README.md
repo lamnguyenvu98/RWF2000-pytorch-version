@@ -27,8 +27,6 @@ python train.py --config rwf2000.yaml
 python inference.py --video test.mp4 --save-dir results/out.mp4 --checkpoint path/to/checkpoint
 ```
 
-
-
 ```
 @INPROCEEDINGS{9412502,
   author={Cheng, Ming and Cai, Kunjing and Li, Ming},
