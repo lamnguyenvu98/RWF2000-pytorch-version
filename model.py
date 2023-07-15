@@ -2,8 +2,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 import torchmetrics
-from pytorch_lightning import LightningModule
-from neptune.new.types import File
+from lightning.pytorch.core import LightningModule
 import matplotlib.pyplot as plt
 
 class ConfusionMatrix():
@@ -33,10 +32,10 @@ class Conv3d_Block(nn.Module):
     self.activation = acts_fn.get(activation, nn.ReLU())
     
     self.Conv3DBlock = nn.Sequential(
-        nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=1, padding="same", bias=False),
+        nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=1, padding=1, bias=False),
         nn.BatchNorm3d(out_channels),
         self.activation,
-        nn.Conv3d(out_channels, out_channels, kernel_size=(3, 1, 1), stride=1, padding="same", bias=False),
+        nn.Conv3d(out_channels, out_channels, kernel_size=(3, 1, 1), stride=1, padding=1, bias=False),
         nn.BatchNorm3d(out_channels),
         self.activation,
         nn.MaxPool3d(pool_size)
@@ -54,7 +53,7 @@ class Conv3d_Block(nn.Module):
       m.weight.data.fill_(1)
       m.bias.data.zero_()
   
-      
+
 class FlowGatedNetwork(nn.Module):
   def __init__(self) -> None:
     super(FlowGatedNetwork, self).__init__()
@@ -94,7 +93,7 @@ class FlowGatedNetwork(nn.Module):
     #         nn.Linear(128, 32),
     #         nn.ReLU(),
     #         nn.Linear(32, 2),
-    #     )    
+    #     )
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
       rgb = self.RGB_Network(x[:, :3, ...])
@@ -193,7 +192,6 @@ class FGN(LightningModule):
         fig = plt.figure()
         self.val_cfm(y_preds, y_true)
         self.val_cfm._plot()
-        self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
         
         self.val_metrics.reset()
         self._precision.reset()
@@ -227,13 +225,19 @@ class FGN(LightningModule):
 if __name__ == '__main__':
   ckp_path = 'model_dir/best.ckpt'
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  # dummy_input = torch.randn((1, 5, 64, 224, 224))
-  model = FlowGatedNetwork()
+  dummy_input = torch.randn((1, 5, 64, 224, 224))
+  model = FlowGatedNetwork().to(device)
   trained_ckp = torch.load(ckp_path, map_location='cpu')['state_dict']
   model_ckp = model.state_dict()
   for k, v in model_ckp.items():
     model_ckp[k] = trained_ckp['model.' + k]
   model.load_state_dict(model_ckp)
-  # model.eval()
+  model.eval()
   # out = model(dummy_input)
   # print(out.shape)
+  
+  model_jit = torch.jit.script(model)
+  out = model_jit(dummy_input)
+  print(out.shape)
+  
+  

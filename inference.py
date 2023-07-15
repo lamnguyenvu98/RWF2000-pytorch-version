@@ -1,13 +1,14 @@
 from copy import deepcopy
 import cv2
 import numpy as np
-from model import FGN
+from model import FlowGatedNetwork
 from utils import preprocessing
 import torch
 from torchvision import transforms
 from dataset.augmentation import Normalize, ToTensor
 import argparse
 from collections import deque
+import time
 
 parser  = argparse.ArgumentParser()
 parser.add_argument('--video', '-v', required=True, type=str, help='Path to video to predict')
@@ -29,11 +30,18 @@ tfms = transforms.Compose([
 
 classnames = ['Fight', 'NonFight']
 
-queue = deque(maxlen=64)
+queue = deque(maxlen=65)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = FGN().load_from_checkpoint(args.checkpoint).to(device)
+model = FlowGatedNetwork()
+trained_ckp = torch.load(args.checkpoint, map_location='cpu')['state_dict']
+model_ckp = model.state_dict()
+for k, v in model_ckp.items():
+    model_ckp[k] = trained_ckp['model.' + k]
+model.load_state_dict(model_ckp)
+model = model.to(device)
+model.eval()
 
 while True:
     ret, frame = cap.read()
@@ -47,10 +55,14 @@ while True:
     queue.popleft()
 
     res = deepcopy(queue)
-    res = preprocessing(frames=res)
+    res = preprocessing(frames=res, dynamic_crop=False)
     res = tfms(res)
     res = res.unsqueeze(0).permute(0, 4, 1, 2, 3).float()
+    print(res.shape)
+    start = time.perf_counter()
     pred = model(res.to(device))
+    end = time.perf_counter() - start
+    print("FPS: ", int(1/end))
     best_idx = pred.softmax(-1).argmax(-1)
 
     score = pred.softmax(-1)[0][best_idx].item()

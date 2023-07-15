@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torch.nn.functional import interpolate
+import torch.nn.functional as F
 import cv2
 
 class Normalize():
@@ -85,7 +85,7 @@ class DynamicCrop():
       for i in range(len(video)):
         crop_result[i] = cv2.resize(crop[i], self.size)
       return crop_result.astype(np.uint8)
-      # crop_rs = interpolate(torch.tensor(crop.copy()).permute(0, 3, 1, 2), self.size)
+      # crop_rs = F.interpolate(torch.tensor(crop.copy()).permute(0, 3, 1, 2), self.size)
       
       
       # return crop_rs.permute(0, 2, 3, 1).numpy()
