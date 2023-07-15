@@ -1,11 +1,11 @@
 from copy import deepcopy
 import cv2
 import numpy as np
-from model import FlowGatedNetwork
-from utils import preprocessing
 import torch
 from torchvision import transforms
-from dataset.augmentation import Normalize, ToTensor
+from src.data.augmentation import Normalize, ToTensor
+from src.models.fgn_model import FlowGatedNetwork
+from src.utils import preprocessing
 import argparse
 from collections import deque
 import time

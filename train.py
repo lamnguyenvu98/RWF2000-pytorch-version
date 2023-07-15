@@ -1,10 +1,10 @@
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning import Trainer, seed_everything
-from pytorch_lightning.loggers import NeptuneLogger
-from dataset.datamodule import RWF2000DataModule
-import neptune.new as neptune
-from model import FGN
-from config import read_args
+from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch import Trainer, seed_everything
+from lightning.pytorch.loggers import NeptuneLogger
+import neptune
+from src.models.lightning_model import FGN
+from src.config import read_args
+from src.data import RWF2000DataModule
 import argparse
 
 parser = argparse.ArgumentParser()

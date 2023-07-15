@@ -2,112 +2,11 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 import torchmetrics
-from lightning.pytorch.core import LightningModule
+from lightning.pytorch import LightningModule
+from neptune.types import File
+from src.models.fgn_model import FlowGatedNetwork
+from src.models.metrics import ConfusionMatrix
 import matplotlib.pyplot as plt
-
-class ConfusionMatrix():
-  def __init__(self, num_classes=2):
-    self.num_classes=num_classes
-    self.result = None
-  
-  def __call__(self, y_preds, y_true):
-    result = torchmetrics.functional.confusion_matrix(y_preds, y_true, num_classes=self.num_classes)
-    self.result = result.detach().cpu().numpy()
-  
-  def _plot(self):
-    import seaborn as sns
-    sns.heatmap(self.result, annot=True, fmt='g')
-
-# Conv 3d Block
-# Weight initialize: kaiming normal
-class Conv3d_Block(nn.Module):
-  def __init__(self, in_channels: int, out_channels: int, pool_size: Tuple = (1, 2, 2), activation: str = 'relu') -> torch.Tensor:
-    super(Conv3d_Block, self).__init__()
-
-    acts_fn = {
-        'relu': nn.ReLU(),
-        'sigmoid': nn.Sigmoid()
-    }
-
-    self.activation = acts_fn.get(activation, nn.ReLU())
-    
-    self.Conv3DBlock = nn.Sequential(
-        nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=1, padding=1, bias=False),
-        nn.BatchNorm3d(out_channels),
-        self.activation,
-        nn.Conv3d(out_channels, out_channels, kernel_size=(3, 1, 1), stride=1, padding=1, bias=False),
-        nn.BatchNorm3d(out_channels),
-        self.activation,
-        nn.MaxPool3d(pool_size)
-      )
-    
-    self.Conv3DBlock.apply(self.init_weights)
-      
-  def forward(self, x):
-    return self.Conv3DBlock(x)
-  
-  def init_weights(self, m):
-    if isinstance(m, nn.Conv3d):
-      nn.init.kaiming_normal_(m.weight)
-    elif isinstance(m, nn.BatchNorm3d):
-      m.weight.data.fill_(1)
-      m.bias.data.zero_()
-  
-
-class FlowGatedNetwork(nn.Module):
-  def __init__(self) -> None:
-    super(FlowGatedNetwork, self).__init__()
-    self.RGB_Network = nn.Sequential(
-            Conv3d_Block(3, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='relu'),
-        )
-
-    self.OptFlow_Network = nn.Sequential(
-            Conv3d_Block(2, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 16, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(16, 32, pool_size=(1, 2, 2), activation='relu'),
-            Conv3d_Block(32, 32, pool_size=(1, 2, 2), activation='sigmoid'),
-        )
-
-    self.MaxPool = nn.MaxPool3d((8, 1, 1))
-
-    # self.attention_mechanism = AttentionMechanism()
-
-    self.Merging = nn.Sequential(
-            Conv3d_Block(32, 64, pool_size=(2, 1, 1), activation='relu'),
-            Conv3d_Block(64, 64, pool_size=(2, 1, 1), activation='relu'),
-            Conv3d_Block(64, 128, pool_size=(2, 1, 1), activation='relu'),
-        )
-    
-    self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-    
-    self.fc = nn.Linear(128, 2)
-    
-    # self.classifier = nn.Sequential(
-    #         nn.Flatten(),
-    #         nn.Linear(128, 128),
-    #         nn.ReLU(),
-    #         nn.Dropout(0.2),
-    #         nn.Linear(128, 32),
-    #         nn.ReLU(),
-    #         nn.Linear(32, 2),
-    #     )
-
-  def forward(self, x: torch.Tensor) -> torch.Tensor:
-      rgb = self.RGB_Network(x[:, :3, ...])
-      opt = self.OptFlow_Network(x[:, 3:, ...])
-      x = torch.mul(rgb, opt)
-      x = self.MaxPool(x)
-      x = self.Merging(x)
-      # x = x.squeeze(2)
-      x = self.global_avg_pool(x)
-      # print(x.shape)
-      # x = self.classifier(x)
-      x = x.flatten(start_dim=1)
-      x = self.fc(x)
-      return x.view(x.size(0), -1)
 
 class FGN(LightningModule):
     def __init__(self,
@@ -135,7 +34,7 @@ class FGN(LightningModule):
         self.recall               = torchmetrics.Recall(num_classes=2, task="multiclass", ignore_index=1)
         self.val_cfm              = ConfusionMatrix()
         
-        self.model = FlowGatedNetwork()
+        self.model                = FlowGatedNetwork()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
       return self.model(x)
@@ -167,35 +66,24 @@ class FGN(LightningModule):
         preds = self(X)
         batch_loss = self.loss_function(preds, y)
         acc = self.val_metrics(preds.softmax(dim=-1), y)
-        precision = self._precision(preds.softmax(dim=-1), y)
-        recall = self.recall(preds.softmax(dim=-1), y)
         self.log("val_b_loss", batch_loss, prog_bar=True, logger=False)
         self.log("val_b_acc", acc, prog_bar=True, logger=False)
-        self.log("recall", recall, prog_bar=True, logger=False)
-        self.log("precision", precision, prog_bar=True, logger=False)
         return {'batch_val_loss': batch_loss, 'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
 
     def validation_epoch_end(self, outputs):
         loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
         mean_acc = self.val_metrics.compute()
-        mean_precision = self._precision.compute()
-        mean_recall = self.recall.compute()
         self.log("val_loss", loss)
         self.log("val_acc", mean_acc)
-        self.log('precision', mean_precision)
-        self.log("recall", mean_recall)
         
         # Draw Confusion Matrix
-
         y_true = torch.cat([x['gt'] for x in outputs])
         y_preds = torch.cat([x['pred'] for x in outputs])
         fig = plt.figure()
         self.val_cfm(y_preds, y_true)
         self.val_cfm._plot()
-        
+        self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
         self.val_metrics.reset()
-        self._precision.reset()
-        self.recall.reset()
 
     def test_step(self, batch, batch_idx):
         X, y = batch
@@ -226,18 +114,15 @@ if __name__ == '__main__':
   ckp_path = 'model_dir/best.ckpt'
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   dummy_input = torch.randn((1, 5, 64, 224, 224))
-  model = FlowGatedNetwork().to(device)
+  model = FGN().to(device)
   trained_ckp = torch.load(ckp_path, map_location='cpu')['state_dict']
-  model_ckp = model.state_dict()
-  for k, v in model_ckp.items():
-    model_ckp[k] = trained_ckp['model.' + k]
-  model.load_state_dict(model_ckp)
+  # model_ckp = model.state_dict()
+  # for k, v in model_ckp.items():
+  #   model_ckp[k] = trained_ckp['model.' + k]
+  model.load_state_dict(trained_ckp)
   model.eval()
-  # out = model(dummy_input)
-  # print(out.shape)
-  
-  model_jit = torch.jit.script(model)
-  out = model_jit(dummy_input)
+  out = model(dummy_input)
   print(out.shape)
+  
   
   

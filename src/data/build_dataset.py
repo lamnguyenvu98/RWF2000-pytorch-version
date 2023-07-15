@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import os 
 from tqdm import tqdm
-from utils import getOpticalFlow
+from src.utils import getOpticalFlow
 import argparse
 
 def Video2Npy(file_path: str, resize: Tuple = (224, 224)):

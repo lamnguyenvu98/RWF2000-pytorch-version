@@ -1,7 +1,7 @@
 import imageio.v3 as iio
 import numpy as np
 import cv2
-from utils import getOpticalFlow, dynamic_crop
+from src.utils import getOpticalFlow, dynamic_crop
 
 def uniform_sampling(video, target_frames=64):
     # get total frames of input video and calculate sampling interval 

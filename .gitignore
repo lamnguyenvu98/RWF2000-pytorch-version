@@ -2,3 +2,6 @@ __pycache__
 env
 logs
 videos
+src/__pycache__
+src/Unofficial_RWF2000_Pytorch_Version.egg-info
+build

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Unofficial-RWF2000-Pytorch-Version"
+version = "1.0.0"
+authors = [
+    {name = "Vu Lam Nguyen", email = "lamnguyenvu98@gmail.com"},
+]
+description = "Unofficial Implementation of Flow Gated Network. This network was trained on RWF2000 dataset"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where=["src"]

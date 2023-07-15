@@ -1,10 +1,6 @@
+import cv2
 import numpy as np
-import os
-import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
-from pytorch_lightning import LightningDataModule
-from augmentation import *
+from torch.utils.data import Dataset
 
 class RWF2000(Dataset):
   def __init__(self, datapath, tfms, target_frames):
@@ -36,29 +32,29 @@ class RWF2000(Dataset):
     return X, y
 
   def uniform_sampling(self, video):
-    # get total frames of input video and calculate sampling interval 
+    # get total frames of input video and calculate sampling interval
     len_frames = int(len(video))
     interval = int(np.ceil(len_frames/self.target_frames))
-    # init empty list for sampled video and 
+    # init empty list for sampled video and
     sampled_video = []
     for i in range(0,len_frames,interval):
-      sampled_video.append(video[i])     
-    # calculate numer of padded frames and fix it 
+      sampled_video.append(video[i])
+    # calculate numer of padded frames and fix it
     num_pad = self.target_frames - len(sampled_video)
     padding = []
     if num_pad>0:
       for i in range(-num_pad,0):
-        try: 
+        try:
           padding.append(video[i])
         except:
           padding.append(video[0])
-      sampled_video += padding     
+      sampled_video += padding
     # get sampled video
     return np.array(sampled_video, dtype=np.float32)
-  
+
   def dynamic_sampling(self, video):
     gradient_frames = np.zeros((video[0], video[1], video[2]))
-    
+
     # convert rgb to gray and calculate gradient
     for i in range(len(video)):
       gray = cv2.cvtColor(video[i, ..., :3], cv2.COLOR_BGR2GRAY)
@@ -73,7 +69,7 @@ class RWF2000(Dataset):
       gY = cv2.convertScaleAbs(gY)
       # combine the gradient representations into a single image
       gradient_frames[i] = cv2.addWeighted(gX, 0.5, gY, 0.5, 0)
-    
+
     # calculate absolute different
     abs_diff_frames = np.zeros_like(gradient_frames)
 
@@ -84,7 +80,7 @@ class RWF2000(Dataset):
           abs_diff_frames[i] = np.zeros_like(gradient_frames[i])
       else:
           abs_diff_frames[i] = np.abs(gradient_frames[i] - gradient_frames[i - 1])
-    
+
     # Compute energy
     energy = list()
     energy_thresh = 50
@@ -94,16 +90,16 @@ class RWF2000(Dataset):
       energy.append(energy_each_frame)
 
     energy = np.array(energy)
-    
+
     max_energy = -9999999
     max_id = -1
-    
+
     for i in range(len(energy) - self.target_frames + 1):
       energy_cal_window = np.sum(energy[i:i+self.target_frames])
       if max_energy < energy_cal_window:
           max_energy = energy_cal_window
           max_id = i
-    
+
     return video[max_id:max_id + self.target_frames, ...]
 
   def search_data(self, datapath):
@@ -115,7 +111,7 @@ class RWF2000(Dataset):
         folder_path = os.path.join(datapath, folder)
         for file_ in os.listdir(folder_path):
             file_path = os.path.join(folder_path,file_)
-            # append the each file path, and keep its label  
+            # append the each file path, and keep its label
             X_path.append(file_path)
             Y_dict[file_path] = self.dir[i]
     return X_path, Y_dict
@@ -140,94 +136,3 @@ class RWF2000(Dataset):
     data = self.uniform_sampling(data)
     # whether to utilize the data augmentation
     return data
-
-
-class RWF2000DataModule(LightningDataModule):
-    def __init__(self, dirpath: str, target_frames=64, batch_size=8):
-        super().__init__()
-        self.dirpath = dirpath
-        self.target_frames = target_frames
-        self.batch_size = batch_size
-
-    def prepare_data(self):
-        # Download
-        self.trainpath = os.path.join(self.dirpath, 'train')
-        self.valpath = os.path.join(self.dirpath, 'val')
-        self.tfms = {
-        "train": transforms.Compose([
-                    Color_Jitter(),
-                    Random_Flip(p=0.5, axis=2),
-                    Normalize(),
-                    ToTensor() ]),
-        "val": transforms.Compose([
-                    Normalize(),
-                    ToTensor() ])
-        }
-  
-    def setup(self, stage = None):
-        self.trn = RWF2000(
-            datapath = self.trainpath,
-            tfms = self.tfms['train'],
-            target_frames = self.target_frames
-        )
-
-        self.val = RWF2000(
-            datapath = self.valpath,
-            tfms = self.tfms['val'],
-            target_frames = self.target_frames
-        )
-
-    def train_dataloader(self):
-        return DataLoader(
-            dataset = self.trn,
-            batch_size = self.batch_size,
-            num_workers = os.cpu_count(),
-            shuffle = True,
-            pin_memory = True,
-            drop_last = True,
-            collate_fn = self.trn.collate_fn
-        )
-    
-    def val_dataloader(self):
-        return DataLoader(
-            dataset = self.val,
-            batch_size = self.batch_size,
-            num_workers = os.cpu_count(),
-            shuffle = False,
-            pin_memory = True,
-            drop_last = False,
-            collate_fn = self.val.collate_fn
-        )
-     
-    def test_dataloader(self):
-        return DataLoader(
-            dataset = self.val,
-            batch_size = self.batch_size,
-            num_workers = os.cpu_count(),
-            shuffle = True,
-            pin_memory = True,
-            drop_last = False,
-            collate_fn = self.val.collate_fn
-        )
-
-if __name__ == '__main__':
-  tfms = transforms.Compose([
-                    DynamicCrop(),
-                    Color_Jitter(),
-                    Random_Flip(p=0.5, axis=2),
-                    # Normalize(),
-                    ToTensor()
-                ])
-  
-  image = np.load('/home/pep/drive/PCLOUD/Dataset/RWF2000_Dataset/RWF2000-Build/val/Fight/39BFeYnbu-I_2.npz', mmap_mode='r')['data']
-  
-  result = tfms(image)
-  result = result.numpy()
-  for i in range(len(result)):
-    im = result[i, ..., :3].astype(np.uint8)
-    cv2.imshow("result", im)
-    if cv2.waitKey(0) == 27: break
-  
-  cv2.destroyAllWindows()
-  
-  
