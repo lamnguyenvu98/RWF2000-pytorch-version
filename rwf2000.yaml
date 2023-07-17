@@ -13,7 +13,8 @@ VALIDATION:
   SAVE_LAST: True
   TOP_K: 3
 SETTINGS:
-  GPU: 1
+  ACCELERATOR: "gpu"
+  DEVICES: 1
   PRECISION: 16
   RESUME: False
 NEPTUNE_LOGGER:
@@ -22,7 +23,7 @@ NEPTUNE_LOGGER:
   WITH_ID:
   TAGS:
 DIR:
-  RESUME_CHECKPOINT: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/last.ckpt'
-  CHECKPOINT_DIR: '/content/pcloud/RWF2000_Training/log_folder/checkpoints/'
-  DATA_DIR: '/content/pcloud/Dataset/RWF2000_Dataset/RWF2000-Build/'
-  LOG_DIR: '/content/pcloud/RWF2000_Training/log_folder'
+  RESUME_CHECKPOINT: '/content/log_folder/checkpoints/last.ckpt'
+  CHECKPOINT_DIR: '/content/log_folder/checkpoints/'
+  DATA_DIR: '/content/RWF2000-Small-Build'
+  LOG_DIR: '/content/log_folder'

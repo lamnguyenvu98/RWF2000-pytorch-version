@@ -31,7 +31,8 @@ val_acc_callback = ModelCheckpoint(
 #     every_n_epochs = 1
 # )
 
-if not args.NEPTUNE_LOGGER.API_TOKEN or not args.NEPTUNE_LOGGER.PROJECT:
+print()
+if (args.NEPTUNE_LOGGER.API_TOKEN is not None) or (args.NEPTUNE_LOGGER.PROJECT is not None):
     # Initialize neptune AI
     run = neptune.init_run(
         api_token=args.NEPTUNE_LOGGER.API_TOKEN,
@@ -63,7 +64,8 @@ datamodule = RWF2000DataModule(
 
 trainer = Trainer(
     max_epochs=args.TRAIN.EPOCHS,
-    gpus=args.SETTINGS.GPU,
+    accelerator=args.SETTINGS.ACCELERATOR,
+    devices=args.SETTINGS.DEVICES,
     default_root_dir=args.DIR.LOG_DIR,
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
@@ -75,7 +77,8 @@ trainer = Trainer(
 # neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
 
 # # log params
-logger.log_hyperparams(params=dict(train_model.hparams))
+if logger:
+    logger.log_hyperparams(params=dict(train_model.hparams))
 
 if args.SETTINGS.RESUME:
     trainer.fit(train_model, datamodule=datamodule, ckpt_path=args.DIR.RESUME_CHECKPOINT)

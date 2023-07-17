@@ -8,7 +8,10 @@ class ConfusionMatrix():
     self.result = None
 
   def __call__(self, y_preds, y_true):
-    result: torch.Tensor = torchmetrics.functional.confusion_matrix(y_preds, y_true, num_classes=self.num_classes)
+    result: torch.Tensor = torchmetrics.functional.confusion_matrix(y_preds, 
+                                                                    y_true, 
+                                                                    num_classes=self.num_classes,
+                                                                    task="multiclass")
     self.result = result.detach().cpu().numpy()
 
   def _plot(self):

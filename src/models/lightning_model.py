@@ -34,6 +34,9 @@ class FGN(LightningModule):
         self.recall               = torchmetrics.Recall(num_classes=2, task="multiclass", ignore_index=1)
         self.val_cfm              = ConfusionMatrix()
         
+        self.training_step_outputs = []
+        self.validation_step_outputs = []
+
         self.model                = FlowGatedNetwork()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -50,16 +53,19 @@ class FGN(LightningModule):
         lr = self.optimizers().param_groups[0]['lr']
         self.log("batch_acc", acc, prog_bar=True, logger=False)
         self.log("lr", lr, prog_bar=True, logger=False)
-        return {'loss': batch_loss * self.trainer.accumulate_grad_batches}
+        outputs = {'loss': batch_loss * self.trainer.accumulate_grad_batches}
+        self.training_step_outputs.append(outputs)
+        return outputs
 
-    def training_epoch_end(self, outputs):
-        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
+    def on_train_epoch_end(self):
+        avg_loss = torch.stack([x['loss'] for x in self.training_step_outputs]).mean()
         mean_acc = self.train_metrics.compute()
         lr = self.optimizers().param_groups[0]['lr']
         self.log("train_acc", mean_acc)
         self.log("train_loss", avg_loss)
         self.log("lr", lr, prog_bar=True)
         self.train_metrics.reset()
+        self.training_step_outputs.clear()
 
     def validation_step(self, batch, batch_idx):
         X, y = batch
@@ -68,41 +74,47 @@ class FGN(LightningModule):
         acc = self.val_metrics(preds.softmax(dim=-1), y)
         self.log("val_b_loss", batch_loss, prog_bar=True, logger=False)
         self.log("val_b_acc", acc, prog_bar=True, logger=False)
-        return {'batch_val_loss': batch_loss, 'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
+        outputs = {'batch_val_loss': batch_loss, 'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
+        self.validation_step_outputs.append(outputs)
+        return outputs
 
-    def validation_epoch_end(self, outputs):
-        loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
+    def on_validation_epoch_end(self):
+        outputs = self.validation_step_outputs
+        loss = torch.stack([x['batch_val_loss'] for x in self.validation_step_outputs]).mean()
         mean_acc = self.val_metrics.compute()
         self.log("val_loss", loss)
         self.log("val_acc", mean_acc)
         
         # Draw Confusion Matrix
-        y_true = torch.cat([x['gt'] for x in outputs])
-        y_preds = torch.cat([x['pred'] for x in outputs])
+        y_true = torch.cat([x['gt'] for x in self.validation_step_outputs])
+        y_preds = torch.cat([x['pred'] for x in self.validation_step_outputs])
         fig = plt.figure()
         self.val_cfm(y_preds, y_true)
         self.val_cfm._plot()
-        self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
+        if self.logger is not None:
+            self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
         self.val_metrics.reset()
 
-    def test_step(self, batch, batch_idx):
-        X, y = batch
-        preds = self(X)
-        batch_loss = self.loss_function(preds, y)
-        acc = self.test_metric_acc(preds.softmax(dim=-1), y)
-        return {'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
+        self.validation_step_outputs.clear()
 
-    def test_epoch_end(self, outputs):
-        cfm = ConfusionMatrix()
-        y_true = torch.cat([x['gt'] for x in outputs])
-        y_preds = torch.cat([x['pred'] for x in outputs])
-        result = cfm(y_preds, y_true)
-        cfm._plot()
-        plt.show()
-        mean_acc = self.test_metric_acc.compute()
-        self.log('test_acc', mean_acc, logger=False)
-        self.test_metric_acc.reset()
-        return {'test_acc': mean_acc}
+    # def test_step(self, batch, batch_idx):
+    #     X, y = batch
+    #     preds = self(X)
+    #     batch_loss = self.loss_function(preds, y)
+    #     acc = self.test_metric_acc(preds.softmax(dim=-1), y)
+    #     return {'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
+
+    # def on_test_epoch_end(self, outputs):
+    #     cfm = ConfusionMatrix()
+    #     y_true = torch.cat([x['gt'] for x in outputs])
+    #     y_preds = torch.cat([x['pred'] for x in outputs])
+    #     result = cfm(y_preds, y_true)
+    #     cfm._plot()
+    #     plt.show()
+    #     mean_acc = self.test_metric_acc.compute()
+    #     self.log('test_acc', mean_acc, logger=False)
+    #     self.test_metric_acc.reset()
+    #     return {'test_acc': mean_acc}
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
@@ -123,6 +135,3 @@ if __name__ == '__main__':
   model.eval()
   out = model(dummy_input)
   print(out.shape)
-  
-  
-  
