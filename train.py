@@ -5,6 +5,7 @@ import neptune
 from src.models.lightning_model import FGN
 from src.config import read_args
 from src.data import RWF2000DataModule
+from src.models.callbacks import ModelMetricsCallback
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -24,6 +25,8 @@ val_acc_callback = ModelCheckpoint(
     mode = "max",
     save_last=args.VALIDATION.SAVE_LAST
 )
+
+model_metric_callback = ModelMetricsCallback(num_classes = 2, task = "multiclass")
 
 # last_ckp = ModelCheckpoint(
 #     dirpath = args.DIR.CHECKPOINT_DIR,
@@ -46,7 +49,7 @@ if (args.NEPTUNE_LOGGER.API_TOKEN is not None) or (args.NEPTUNE_LOGGER.PROJECT i
     )
 
 else:
-    logger = False
+    logger = None
 
 train_model = FGN(
     learning_rate = args.TRAIN.LEARNING_RATE, 
@@ -69,7 +72,7 @@ trainer = Trainer(
     default_root_dir=args.DIR.LOG_DIR,
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
-    callbacks=[val_acc_callback],
+    callbacks=[val_acc_callback, model_metric_callback],
     logger=logger
 )
 
@@ -77,7 +80,7 @@ trainer = Trainer(
 # neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
 
 # # log params
-if logger:
+if logger is not None:
     logger.log_hyperparams(params=dict(train_model.hparams))
 
 if args.SETTINGS.RESUME:

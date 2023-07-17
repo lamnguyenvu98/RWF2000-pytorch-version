@@ -1,6 +1,7 @@
 __pycache__
 env
-logs
+src/torchserve/logs
+src/torchserve/model_store
 videos
 src/__pycache__
 src/models/__pycache__
@@ -10,3 +11,4 @@ test_request.ipynb
 inference.ipynb
 dist
 ncnn_models
+src/rwf2000_pytorch.egg-info

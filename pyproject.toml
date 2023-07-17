@@ -16,4 +16,7 @@ dynamic = ["dependencies"]
 dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
-where=["src", "rayserve"]
+where=["src"]
+
+[project.scripts]
+rayserve = "src.rayserve.deployment:app"
