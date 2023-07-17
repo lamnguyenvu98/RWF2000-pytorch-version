@@ -32,7 +32,13 @@ class ModelMetricsCallback(Callback):
         self.val_cfm              = torchmetrics.ConfusionMatrix(task=task, num_classes=num_classes)
         self.train_loss_metrics   = ComputeLoss()
         self.val_loss_metrics     = ComputeLoss()
-            
+
+    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+        self.train_metrics  = self.train_metrics.to(pl_module.device)
+        self.val_metrics    = self.val_metrics.to(pl_module.device)
+        self.val_cfm        = self.val_cfm.to(pl_module.device)
+        
+
     def on_train_batch_end(self, trainer: Trainer, pl_module: LightningModule, outputs: STEP_OUTPUT, batch: Any, batch_idx: int) -> None:
         pred_y: torch.Tensor = outputs["predict_y"]
         gt_y: torch.Tensor = outputs["gt_y"]
@@ -59,6 +65,7 @@ class ModelMetricsCallback(Callback):
         val_batch_loss = outputs["loss"]
         val_batch_accuracy = self.val_metrics(pred_y.softmax(dim=-1), gt_y)
         self.val_loss_metrics(val_batch_loss)
+
         self.val_cfm.update(pred_y.softmax(dim=-1), gt_y)
 
         # Log train batch result:
@@ -72,11 +79,10 @@ class ModelMetricsCallback(Callback):
         
         pl_module.log("val_epoch_loss", val_epoch_loss, prog_bar=False, logger=True)
         pl_module.log("val_epoch_accuracy", val_epoch_accuracy, prog_bar=False, logger=True)
-        
-        if pl_module.logger is not None:
+
+        if pl_module.logger:
             pl_module.logger.experiment['CFM/ConfusionMatrix_{:02d}'.format(pl_module.current_epoch)].upload(File.as_image(fig))
         
         self.val_loss_metrics.reset()
         self.val_metrics.reset()
         self.val_cfm.reset()
-        

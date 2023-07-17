@@ -17,9 +17,9 @@ args = read_args(ar.config)
 seed_everything(42, workers=True)
 
 val_acc_callback = ModelCheckpoint(
-    monitor = 'val_acc',
+    monitor = 'val_epoch_accuracy',
     dirpath = args.DIR.CHECKPOINT_DIR,
-    filename = 'fgn-{epoch:02d}-{val_acc:.2f}-{train_acc:.2f}',
+    filename = 'fgn-{epoch:02d}-{val_epoch_accuracy:.2f}-{train_epoch_accuracy:.2f}',
     every_n_epochs = 1,
     save_top_k = args.VALIDATION.TOP_K, # 4 best ckp based on val_acc
     mode = "max",
@@ -49,7 +49,7 @@ if (args.NEPTUNE_LOGGER.API_TOKEN is not None) or (args.NEPTUNE_LOGGER.PROJECT i
     )
 
 else:
-    logger = None
+    logger = False
 
 train_model = FGN(
     learning_rate = args.TRAIN.LEARNING_RATE, 
@@ -80,7 +80,7 @@ trainer = Trainer(
 # neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
 
 # # log params
-if logger is not None:
+if logger:
     logger.log_hyperparams(params=dict(train_model.hparams))
 
 if args.SETTINGS.RESUME:
