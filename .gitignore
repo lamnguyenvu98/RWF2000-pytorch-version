@@ -3,8 +3,10 @@ env
 logs
 videos
 src/__pycache__
-src/Unofficial_RWF2000_Pytorch_Version.egg-info
-src/RWF2000_Torch.egg-info
+src/models/__pycache__
+src/data/__pycache__
 build
 test_request.ipynb
 inference.ipynb
+dist
+ncnn_models

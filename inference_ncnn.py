@@ -1,12 +1,15 @@
 import argparse
 import ncnn
 import cv2
+import torch
+import numpy as np
 import time
 from copy import deepcopy
 from collections import deque
+from torchvision import transforms
 
-from utils import preprocessing
-from dataset.augmentation import Normalize
+from src.utils import preprocessing
+from src.data.augmentation import Normalize, ToTensor
 
 # parser  = argparse.ArgumentParser()
 # parser.add_argument('--video', '-v', required=True, type=str, help='Path to video to predict')
@@ -23,17 +26,23 @@ cap = cv2.VideoCapture("videos/_q5Nwh4Z6ao_3.avi")
 # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 # videoWriter = cv2.VideoWriter(args.savedir, fourcc, fps, size)
 
-net = ncnn.Net()
-net.load_param("model_dir/fgn.param")
-net.load_model("model_dir/fgn.bin")
-
-print("[INFO] Load model successful")
+# tfms = transforms.Compose([
+#     Normalize(),
+#     ToTensor()
+# ])
 
 normalize = Normalize()
 
 classnames = ['Fight', 'NonFight']
 
 queue = deque(maxlen=65)
+
+net = ncnn.Net()
+net.load_param("ncnn_models/model_jit.ncnn.param")
+net.load_model("ncnn_models/model_jit.ncnn.bin")
+net.opt.num_threads = 4
+
+print("[INFO] Load model successful")
 
 while True:
     ret, frame = cap.read()
@@ -49,17 +58,23 @@ while True:
     res = deepcopy(queue)
     res = preprocessing(frames=res, dynamic_crop=False)
     res = normalize(res)
+    in0 = res.transpose((3, 0, 1, 2)).astype(np.float32) # (64, 224, 224, 5) => (5, 64, 224, 224)
+    print("Input shape:",in0.shape)
+    mat_in = ncnn.Mat(in0).clone()
+    # in0 = res.unsqueeze(0).permute(0, 4, 1, 2, 3).float()
     
-    # mat_in = ncnn.Mat()
-    ex = net.create_extractor()
-    ex.input("input", res)
-    _, mat_out = ex.extract("output")
+    with net.create_extractor() as ex:
+        ex.input("in0", mat_in)
+        _, out0 = ex.extract("out0")
+        out = torch.from_numpy(np.array(out0)).unsqueeze(0).softmax(-1)
     
-    show_frame = queue[-1].copy()
-    cv2.imshow("Frame", show_frame)
-    if cv2.waitKey(1) & 0xFF == 27:
-        break
+        print("Out result:", out)
+        
+    # show_frame = queue[-1].copy()
+    # cv2.imshow("Frame", show_frame)
+    # if cv2.waitKey(1) == 27:
+    #     break
     
 cap.release()
-cv2.destroyAllWindows()
+# cv2.destroyAllWindows()
     

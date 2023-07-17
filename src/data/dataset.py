@@ -1,10 +1,12 @@
 import cv2
+import os
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
-class RWF2000(Dataset):
+class RWF2000Dataset(Dataset):
   def __init__(self, datapath, tfms, target_frames):
-    super(RWF2000, self).__init__()
+    super(RWF2000Dataset, self).__init__()
     self.tfms = tfms
     # Load all the save_path of files, and create a dictionary that save the pair of "data:label"
     self.X_path, self.Y_dict = self.search_data(datapath)

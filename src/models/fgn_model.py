@@ -1,18 +1,16 @@
 import torch
 import torch.nn as nn
+from typing import Tuple
 
 # Conv 3d Block
 # Weight initialize: kaiming normal
 class Conv3d_Block(nn.Module):
-  def __init__(self, in_channels: int, out_channels: int, pool_size: tuple = (1, 2, 2), activation: str = 'relu') -> torch.Tensor:
+  def __init__(self, in_channels: int, out_channels: int, pool_size: Tuple = (1, 2, 2), activation: str = 'relu') -> torch.Tensor:
     super(Conv3d_Block, self).__init__()
-
-    acts_fn = {
-        'relu': nn.ReLU(),
-        'sigmoid': nn.Sigmoid()
-    }
-
-    self.activation = acts_fn.get(activation, nn.ReLU())
+    match activation:
+      case 'relu': self.activation = nn.ReLU()
+      case 'sigmoid': self.activation = nn.Sigmoid()
+      case _: self.activation = nn.ReLU()
 
     self.Conv3DBlock = nn.Sequential(
         nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=1, padding=1, bias=False),

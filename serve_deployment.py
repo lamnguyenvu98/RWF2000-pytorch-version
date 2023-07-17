@@ -1,4 +1,3 @@
-import ray
 from ray import serve
 from src.models.fgn_model import FlowGatedNetwork
 from src.utils import preprocessing

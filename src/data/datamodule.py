@@ -1,11 +1,10 @@
 import numpy as np
 import os
-import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from lightning.pytorch import LightningDataModule
 from src.data.augmentation import *
-from src.data.dataset import RWF2000
+from src.data.dataset import RWF2000Dataset
 
 class RWF2000DataModule(LightningDataModule):
     def __init__(self, dirpath: str, target_frames=64, batch_size=8):
@@ -30,13 +29,13 @@ class RWF2000DataModule(LightningDataModule):
         }
   
     def setup(self, stage = None):
-        self.trn = RWF2000(
+        self.trn = RWF2000Dataset(
             datapath = self.trainpath,
             tfms = self.tfms['train'],
             target_frames = self.target_frames
         )
 
-        self.val = RWF2000(
+        self.val = RWF2000Dataset(
             datapath = self.valpath,
             tfms = self.tfms['val'],
             target_frames = self.target_frames

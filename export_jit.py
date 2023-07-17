@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from model import FGN
+from src.models.fgn_model import FlowGatedNetwork
 import argparse
 
 def calc_same_padding(kernel_size, stride, input_size):
@@ -32,19 +32,20 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = FGN()
+    model = FlowGatedNetwork()
     trained_ckp = torch.load(args.checkpoint, map_location='cpu')['state_dict']
-    model.load_state_dict(trained_ckp)
+    model_state = model.state_dict()
+    for k, v in trained_ckp.items():
+        model_state[k] = trained_ckp["model."+ k]
+    model.load_state_dict(model_state)
     model = model.to(device)
     # model.apply(lambda m: replace_conv2d_with_same_padding(m, 224))
 
     x = torch.randn(1, 5, 64, 224, 224)
 
-    model.to_onnx(file_path=args.savepath,
-                  input_sample=x,
-                  export_params=True,
-                  input_names=["input"],
-                  output_names=["output"])
+    with torch.no_grad():
+        tc = torch.jit.trace(model, x)
+        tc.save(args.savepath)
 
 
 
