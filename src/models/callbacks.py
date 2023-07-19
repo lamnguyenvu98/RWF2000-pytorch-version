@@ -9,20 +9,7 @@ import torchmetrics
 
 from neptune.types import File
 
-class ComputeLoss:
-    def __init__(self):
-        self.all_losses = []
-    
-    def __call__(self, loss_value: Union[torch.Tensor, float]) -> None:
-        if isinstance(loss_value, torch.Tensor):
-            loss_value: float = loss_value.detach().item()
-        self.all_losses.append(loss_value)
-    
-    def compute(self) -> None:
-        return np.mean(self.all_losses)
-    
-    def reset(self) -> None:
-        self.all_losses.clear()
+from src.models.metrics import ComputeLoss
 
 class ModelMetricsCallback(Callback):
     def __init__(self, num_classes=2, task="multiclass"):
@@ -32,12 +19,11 @@ class ModelMetricsCallback(Callback):
         self.val_cfm              = torchmetrics.ConfusionMatrix(task=task, num_classes=num_classes)
         self.train_loss_metrics   = ComputeLoss()
         self.val_loss_metrics     = ComputeLoss()
-
-    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+        
+    def on_fit_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
         self.train_metrics  = self.train_metrics.to(pl_module.device)
         self.val_metrics    = self.val_metrics.to(pl_module.device)
         self.val_cfm        = self.val_cfm.to(pl_module.device)
-        
 
     def on_train_batch_end(self, trainer: Trainer, pl_module: LightningModule, outputs: STEP_OUTPUT, batch: Any, batch_idx: int) -> None:
         pred_y: torch.Tensor = outputs["predict_y"]
