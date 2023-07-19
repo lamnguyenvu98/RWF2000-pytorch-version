@@ -5,6 +5,7 @@ import neptune
 from src.models.lightning_model import FGN
 from src.config import read_args
 from src.data import RWF2000DataModule
+from src.models.callbacks import ModelMetricsCallback
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -16,14 +17,16 @@ args = read_args(ar.config)
 seed_everything(42, workers=True)
 
 val_acc_callback = ModelCheckpoint(
-    monitor = 'val_acc',
+    monitor = 'val_epoch_accuracy',
     dirpath = args.DIR.CHECKPOINT_DIR,
-    filename = 'fgn-{epoch:02d}-{val_acc:.2f}-{train_acc:.2f}',
+    filename = 'fgn-{epoch:02d}-{val_epoch_accuracy:.2f}-{train_epoch_accuracy:.2f}',
     every_n_epochs = 1,
     save_top_k = args.VALIDATION.TOP_K, # 4 best ckp based on val_acc
     mode = "max",
     save_last=args.VALIDATION.SAVE_LAST
 )
+
+model_metric_callback = ModelMetricsCallback(num_classes = 2, task = "multiclass")
 
 # last_ckp = ModelCheckpoint(
 #     dirpath = args.DIR.CHECKPOINT_DIR,
@@ -69,7 +72,7 @@ trainer = Trainer(
     default_root_dir=args.DIR.LOG_DIR,
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
-    callbacks=[val_acc_callback],
+    callbacks=[val_acc_callback, model_metric_callback],
     logger=logger
 )
 

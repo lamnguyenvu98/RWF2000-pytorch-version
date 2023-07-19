@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: rwf2000-pytorch
+Version: 1.0.0
+Summary: Unofficial Implementation of Flow Gated Network. This network was trained on RWF2000 dataset
+Author-email: Vu Lam Nguyen <lamnguyenvu98@gmail.com>
+Requires-Python: ==3.10.*

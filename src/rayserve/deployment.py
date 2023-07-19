@@ -1,3 +1,4 @@
+import ray
 from ray import serve
 from src.models.fgn_model import FlowGatedNetwork
 from src.utils import preprocessing
@@ -11,7 +12,7 @@ import torch
 import pickle
 from starlette.requests import Request
 
-MODEL_CHECKPOINT = './model_dir/best.ckpt'
+MODEL_CHECKPOINT = 'model_dir/best.ckpt'
 
 @serve.deployment(num_replicas=1, ray_actor_options={"num_cpus": 4, "num_gpus": 0}, route_prefix='/predict')
 class RWF2000_Deployment:
@@ -46,4 +47,10 @@ class RWF2000_Deployment:
         result = self.predict(frames)
         return result
 
-rwf2000_app = RWF2000_Deployment.bind()
+app = RWF2000_Deployment.bind()
+
+# if __name__ == '__main__':
+#     # handle = serve.run(RWF2000_Deployment.bind(),
+#     #                    port=5050)
+#     serve.start(detached=True, http_options={"port": 5050})
+#     RWF2000_Deployment.deploy()

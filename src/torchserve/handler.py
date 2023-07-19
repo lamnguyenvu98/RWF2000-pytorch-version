@@ -1,11 +1,10 @@
 import sys
 # sys.path.append('/home/pep/Drive/PCLOUD/Projects/RWF2000-Flow-Gated-Net')
-sys.path.append('/app')
-from serve.ts.torch_handler.base_handler import BaseHandler
-from model import TrainingModel
+from src.serve.ts.torch_handler.base_handler import BaseHandler
+from src.models.fgn_model import FlowGatedNetwork
 from torchvision import transforms
-from Dataset.augmentation import Normalize, ToTensor
-from utils import preprocessing
+from src.data.augmentation import Normalize, ToTensor
+from src.utils import preprocessing
 import torch
 import pickle
 from base64 import b64decode
@@ -30,7 +29,7 @@ class ModelHandler(BaseHandler):
         manifest = context.manifest
         properties = context.system_properties
         
-        model_dir = properties.get("model_dir")
+        model_dir = properties.get("../../model_dir")
         
         # serialized_file = manifest['model']['serializedFile']
         model_file = manifest['model']['modelFile']
