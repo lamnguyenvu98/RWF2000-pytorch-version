@@ -10,3 +10,4 @@ test_request.ipynb
 inference.ipynb
 dist
 ncnn_models
+src/rwf2000_pytorch.egg-info
