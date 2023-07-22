@@ -48,7 +48,6 @@ class RWF2000_Deployment:
         return result
 
 app = RWF2000_Deployment.bind()
-
 # if __name__ == '__main__':
 #     # handle = serve.run(RWF2000_Deployment.bind(),
 #     #                    port=5050)

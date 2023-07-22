@@ -78,7 +78,7 @@ def Save2Npy(file_dir: str, save_dir: str):
     
     return None
 
-if __name__ == '__main__':
+def main():
     parser  = argparse.ArgumentParser()
     parser.add_argument('--source', '-s', required=True, type=str, help='Path to original dataset')
     parser.add_argument('--target', '-t', required=True, type=str, help='Path to build dataset')
@@ -92,3 +92,6 @@ if __name__ == '__main__':
             path1 = os.path.join(source_path, f1, f2)
             path2 = os.path.join(target_path, f1, f2)
             Save2Npy(file_dir=path1, save_dir=path2)
+
+if __name__ == '__main__':
+    main()

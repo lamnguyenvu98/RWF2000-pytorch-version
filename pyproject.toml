@@ -20,4 +20,5 @@ packages=["src"]
 include-package-data=true
 
 [project.scripts]
-export-jit = "src.export_jit:main"
+export-script = "src.export_script:main"
+build-dataset = "src.data.build_dataset:main"
