@@ -1,6 +1,6 @@
 import sys
 # sys.path.append('/home/pep/Drive/PCLOUD/Projects/RWF2000-Flow-Gated-Net')
-from src.serve.ts.torch_handler.base_handler import BaseHandler
+from .serve.ts.torch_handler.base_handler import BaseHandler
 from src.models.fgn_model import FlowGatedNetwork
 from torchvision import transforms
 from src.data.augmentation import Normalize, ToTensor

@@ -2,7 +2,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.loggers import NeptuneLogger
 import neptune
-from src.models.lightning_model import FGN
+from src.models import FGN
 from src.config import read_args
 from src.data import RWF2000DataModule
 from src.models.callbacks import ModelMetricsCallback

@@ -1,3 +1,6 @@
+"""
+Send request to test serving model
+"""
 import requests
 import imageio.v3 as iio
 import pickle

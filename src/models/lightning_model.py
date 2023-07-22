@@ -1,12 +1,7 @@
-from typing import Tuple
 import torch
 import torch.nn as nn
-import torchmetrics
 from lightning.pytorch import LightningModule
-from neptune.types import File
 from src.models.fgn_model import FlowGatedNetwork
-from src.models.metrics import ConfusionMatrix
-import matplotlib.pyplot as plt
 
 class FGN(LightningModule):
     def __init__(self,

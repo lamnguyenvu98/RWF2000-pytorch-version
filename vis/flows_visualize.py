@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from src.utils import getOpticalFlow, uniform_sampling
-from copy import deepcopy
 
 test_video = "/home/pep/drive/PCLOUD/Dataset/RWF2000_Dataset/RWF-2000/train/Fight/3kpviz7lAMY_4.avi"
 

@@ -1,1 +1,1 @@
-from data.datamodule import RWF2000DataModule
+from .datamodule import RWF2000DataModule

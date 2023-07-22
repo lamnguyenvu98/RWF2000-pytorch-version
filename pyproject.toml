@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rwf2000-pytorch"
+name = "FlowGatedNetwork"
 version = "1.0.0"
 authors = [
     {name = "Vu Lam Nguyen", email = "lamnguyenvu98@gmail.com"},
@@ -15,8 +15,9 @@ dynamic = ["dependencies"]
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
-[tool.setuptools.packages.find]
-where=["src"]
+[tool.setuptools]
+packages=["src"]
+include-package-data=true
 
 [project.scripts]
-rayserve = "src.rayserve.deployment:app"
+export-jit = "src.export_jit:main"

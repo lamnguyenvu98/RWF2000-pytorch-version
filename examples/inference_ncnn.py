@@ -6,10 +6,9 @@ import numpy as np
 import time
 from copy import deepcopy
 from collections import deque
-from torchvision import transforms
 
 from src.utils import preprocessing
-from src.data.augmentation import Normalize, ToTensor
+from src.data.augmentation import Normalize
 
 # parser  = argparse.ArgumentParser()
 # parser.add_argument('--video', '-v', required=True, type=str, help='Path to video to predict')

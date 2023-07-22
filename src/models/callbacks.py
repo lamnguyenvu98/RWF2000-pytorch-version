@@ -1,10 +1,9 @@
-from typing import Any, Optional, Union
+from typing import Any
 from lightning.pytorch import Callback
 from lightning.pytorch import Trainer, LightningModule
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 
 import torch
-import numpy as np
 import torchmetrics
 
 from neptune.types import File

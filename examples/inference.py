@@ -1,6 +1,5 @@
 from copy import deepcopy
 import cv2
-import numpy as np
 import torch
 from torchvision import transforms
 from src.data.augmentation import Normalize, ToTensor

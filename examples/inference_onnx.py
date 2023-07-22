@@ -6,8 +6,8 @@ import cv2
 import numpy as np
 from copy import deepcopy
 
-from utils import preprocessing
-from dataset.augmentation import Normalize
+from src.utils import preprocessing
+from src.data.augmentation import Normalize
 
 onnx_model_file_path = 'model_dir/fgn.onnx'
 

@@ -24,7 +24,8 @@ def replace_conv2d_with_same_padding(m: nn.Module, input_size=224):
                 stride=m.stride,
                 input_size=input_size
             )
-if __name__ == '__main__':
+
+def main():
     parser  = argparse.ArgumentParser()
     parser.add_argument('--savepath', '-d', required=True, type=str, help='Path to write result')
     parser.add_argument('--checkpoint', '-c', required=True, type=str, help='Path to checkpoint')
@@ -35,7 +36,7 @@ if __name__ == '__main__':
     model = FlowGatedNetwork()
     trained_ckp = torch.load(args.checkpoint, map_location='cpu')['state_dict']
     model_state = model.state_dict()
-    for k, v in trained_ckp.items():
+    for k, v in model_state.items():
         model_state[k] = trained_ckp["model."+ k]
     model.load_state_dict(model_state)
     model = model.to(device)
@@ -46,6 +47,9 @@ if __name__ == '__main__':
     with torch.no_grad():
         tc = torch.jit.trace(model, x)
         tc.save(args.savepath)
+
+if __name__ == '__main__':
+    main()
 
 
 
