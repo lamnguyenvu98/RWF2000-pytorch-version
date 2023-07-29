@@ -73,8 +73,27 @@ build-dataset --source <path of downloaded dataset> --target <path of processed 
 python examples/train.py --config rwf2000.yaml
 ```
 
-## 3 Inference
-- Start ray serve:
+## 3. Export torchscript/ONNX
+```
+export-script --checkpoint <path of checkpoint> --scriptpath <path of torchscript or onnx> --type <"onnx" or "torchscript">
+```
+
+Examples:
+```
+export-script --checkpoint model_dir/best.ckpt --scriptpath model_dir/best.tc --type torchscript
+```
+
+```
+export-script --checkpoint model_dir/best.ckpt --scriptpath model_dir/best.onnx --type onnx
+```
+
+## 4. Inference
+- Convert ONNX model to Openvino IR:
+```
+mo --input_model <path onnx model> --model_name <name of exported file, eg: FGN> --output_dir ./model_dir/openvino/ --input_shape "[1,5,64,224,224]"
+```
+
+- Start ray serve (execute at root directory):
 ```
 serve run src.rayserve.deployment:app --port 5050
 ```
@@ -105,16 +124,6 @@ response = requests.post(
 result = json.loads(response.content.decode('utf-8'))
 
 print(result)
-```
-
-## 4. Export torchscript
-```
-export-script --checkpoint <path of checkpoint> --scriptpath <path of torchscript>
-```
-
-Examples:
-```
-export-script --checkpoint model_dir/best.ckpt --scriptpath model_dir/best.tc
 ```
 
 ## Cite:

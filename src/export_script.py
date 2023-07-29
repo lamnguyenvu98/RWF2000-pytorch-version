@@ -28,6 +28,7 @@ def replace_conv2d_with_same_padding(m: nn.Module, input_size=224):
 def main():
     parser  = argparse.ArgumentParser()
     parser.add_argument('--scriptpath', '-d', required=True, type=str, help='Path to write result')
+    parser.add_argument('--type', '-t', default="onnx", choices=["onnx", "torchscript"], type=str, help="Type of model to export [ONNX or TorchScript]")
     parser.add_argument('--checkpoint', '-c', required=True, type=str, help='Path to checkpoint')
     args = parser.parse_args()
 
@@ -43,10 +44,14 @@ def main():
     # model.apply(lambda m: replace_conv2d_with_same_padding(m, 224))
 
     x = torch.randn(1, 5, 64, 224, 224)
-
-    with torch.no_grad():
-        tc = torch.jit.trace(model, x)
-        tc.save(args.scriptpath)
+    
+    if args.type == "torchscript":
+        with torch.no_grad():
+            tc = torch.jit.trace(model, x)
+            tc.save(args.scriptpath)
+    elif args.type == "onnx":
+        with torch.no_grad():
+            torch.onnx.export(model, x, args.scriptpath, export_params=True, input_names=["input"], output_names=["output"])
 
 if __name__ == '__main__':
     main()

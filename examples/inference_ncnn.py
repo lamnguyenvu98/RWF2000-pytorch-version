@@ -17,7 +17,7 @@ from src.data.augmentation import Normalize
 # parser.add_argument('--binarypath', '-b', required=True, type=str, help='Path to model binary')
 # args = parser.parse_args()
 
-cap = cv2.VideoCapture("videos/_q5Nwh4Z6ao_3.avi")
+cap = cv2.VideoCapture("../videos/_q5Nwh4Z6ao_3.avi")
 
 # Init video writer
 # fps = cap.get(cv2.CAP_PROP_FPS)
@@ -37,8 +37,8 @@ classnames = ['Fight', 'NonFight']
 queue = deque(maxlen=65)
 
 net = ncnn.Net()
-net.load_param("ncnn_models/model_jit.ncnn.param")
-net.load_model("ncnn_models/model_jit.ncnn.bin")
+net.load_param("../model_dir/ncnn_models/model_jit.ncnn.param")
+net.load_model("../model_dir/ncnn_models/model_jit.ncnn.bin")
 net.opt.num_threads = 4
 
 print("[INFO] Load model successful")
@@ -63,10 +63,13 @@ while True:
     # in0 = res.unsqueeze(0).permute(0, 4, 1, 2, 3).float()
     
     with net.create_extractor() as ex:
+        start = time.perf_counter()
         ex.input("in0", mat_in)
         _, out0 = ex.extract("out0")
+        end = time.perf_counter() - start
         out = torch.from_numpy(np.array(out0)).unsqueeze(0).softmax(-1)
-    
+        
+        print("Performance:", end)
         print("Out result:", out)
         
     # show_frame = queue[-1].copy()

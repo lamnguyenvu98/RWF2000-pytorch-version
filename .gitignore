@@ -3,6 +3,7 @@ env
 src/torchserve/logs
 src/torchserve/model_store
 videos
+results
 src/__pycache__
 src/models/__pycache__
 src/data/__pycache__
