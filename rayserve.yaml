@@ -1,0 +1,32 @@
+# This file was generated using the `serve build` command on Ray v2.6.1.
+
+proxy_location: EveryNode
+
+http_options:
+
+  host: 0.0.0.0
+
+  port: 5050
+
+applications:
+
+- name: FGN_App
+
+  route_prefix: /predict
+
+  import_path: src:app_builder
+
+  args:
+    model_ir_path: "./model_dir/openvino/FGN.xml"
+    device: "CPU"
+    num_threads: 4
+
+  runtime_env: {}
+
+  deployments:
+
+  - name: RWF2000_Deployment
+    num_replicas: 1
+    ray_actor_options:
+      num_cpus: 4.0
+      num_gpus: 0.0

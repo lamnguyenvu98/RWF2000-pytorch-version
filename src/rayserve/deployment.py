@@ -1,23 +1,27 @@
+import ray
 from ray import serve
+from ray.serve import Application
 from src.utils import preprocessing
 from src.data.augmentation import Normalize
 
 from openvino.runtime import Core, properties
 
+# from fastapi import FastAPI
+
 import numpy as np
 import pickle
 from starlette.requests import Request
 
-MODEL_CHECKPOINT = 'model_dir/openvino/FGN.xml'
+MODEL_CHECKPOINT = '/home/pep/Drive/PCLOUD/Projects/RWF2000-Flow-Gated-Net/model_dir/openvino/FGN.xml'
 
 @serve.deployment(num_replicas=1, ray_actor_options={"num_cpus": 4, "num_gpus": 0}, route_prefix='/predict')
 class RWF2000_Deployment:
-    def __init__(self):        
+    def __init__(self, model_ir_path: str, device: str, num_threads: int):        
         core = Core()
-        model_ir = core.read_model(model=MODEL_CHECKPOINT)
+        model_ir = core.read_model(model=model_ir_path)
         self.compiled_model_ir = core.compile_model(model=model_ir, 
-                                                    device_name="CPU",
-                                                    config={"INFERENCE_NUM_THREADS": 8})
+                                                    device_name=device,
+                                                    config={"INFERENCE_NUM_THREADS": num_threads})
         
         
         self.normalizer = Normalize()
@@ -43,9 +47,12 @@ class RWF2000_Deployment:
         result = self.predict(frames)
         return result
 
-app = RWF2000_Deployment.bind()
+# def main():
+def app_builder(args: dict[str, str]) -> Application:
+     return RWF2000_Deployment.bind(args["model_ir_path"], args["device"], args["num_threads"])
+
+# app = RWF2000_Deployment.bind(model_ir_path="model_dir/openvino/FGN.xml", device="CPU", num_threads=4)
+
+# app = RWF2000_Deployment.bind()
 # if __name__ == '__main__':
-#     # handle = serve.run(RWF2000_Deployment.bind(),
-#     #                    port=5050)
-#     serve.start(detached=True, http_options={"port": 5050})
-#     RWF2000_Deployment.deploy()
+#     main()

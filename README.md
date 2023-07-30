@@ -95,7 +95,14 @@ mo --input_model <path onnx model> --model_name <name of exported file, eg: FGN>
 
 - Start ray serve (execute at root directory):
 ```
-serve run src.rayserve.deployment:app --port 5050
+serve run rayserve.yaml
+```
+Modify some arguments (args) in `rayserve.yaml`; such as `model_ir_path` (path of Openvino IR xml file), `device` (inference device: "CPU", "GPU"), `num_threads` (number of threads for inference)
+
+or 
+
+```
+serve run src:app_builder model_ir_path="<path of openvino ir xml>" device="<CPU or GPU>" num_threads=<1, 2, 3, 4...> --port <port number>
 ```
 
 - Send request:
