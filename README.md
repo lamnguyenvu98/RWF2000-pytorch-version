@@ -74,23 +74,20 @@ python examples/train.py --config rwf2000.yaml
 ```
 
 ## 3. Export torchscript/ONNX
+Export to TorchScript:
 ```
-export-script --checkpoint <path of checkpoint> --scriptpath <path of torchscript or onnx> --type <"onnx" or "torchscript">
-```
-
-Examples:
-```
-export-script --checkpoint model_dir/best.ckpt --scriptpath model_dir/best.tc --type torchscript
+export-script torchscript --out-dir ./model_dir --checkpoint ./model_dir/best.ckpt --name FGN
 ```
 
+Export to ONNX:
 ```
-export-script --checkpoint model_dir/best.ckpt --scriptpath model_dir/best.onnx --type onnx
+export-script onnx --out-dir ./model_dir --checkpoint ./model_dir/best.ckpt --name FGN --opset-version 11
 ```
 
 ## 4. Inference
 - Convert ONNX model to Openvino IR:
 ```
-mo --input_model <path onnx model> --model_name <name of exported file, eg: FGN> --output_dir ./model_dir/openvino/ --input_shape "[1,5,64,224,224]"
+mo --input_model <path onnx model> --model_name <name of exported file, eg: FGN> --output_dir ./model_dir/openvino/ --input_shape "[-1,5,64,224,224]"
 ```
 
 - Start ray serve (execute at root directory):
@@ -105,6 +102,11 @@ or
 serve run src:app_builder model_ir_path="<path of openvino ir xml>" device="<CPU or GPU>" num_threads=<1, 2, 3, 4...> --port <port number>
 ```
 
+Quick demo:
+```
+serve run src:app_builder model_ir_path="./model_dir/openvino/FGN.xml" device="CPU" num_threads=1 --port 5050
+```
+
 - Send request:
 
 ```
@@ -113,7 +115,7 @@ import imageio.v3 as iio
 import pickle
 import json
 
-video_path = 'videos/_q5Nwh4Z6ao_3.avi'
+video_path = 'videos/_q5Nwh4Z6ao_3.avi' # change this video path
 
 frames = iio.imread(video_path, extension='.avi')[:64]
 
@@ -131,6 +133,13 @@ response = requests.post(
 result = json.loads(response.content.decode('utf-8'))
 
 print(result)
+```
+
+For inference on video:
+```
+cd examples
+
+python inference_openvino.py --video ../videos/_q5Nwh4Z6ao_3.avi --save-dir ../results/res.mp4 --ir_model ../model_dir/openvino/FGN.xml
 ```
 
 ## Cite:

@@ -59,7 +59,7 @@ def dynamic_crop(video):
     # get cropped video 
     return video[:,x-56:x+56,y-56:y+56,:]
 
-def preprocessing(frames, dynamic_crop=True):
+def preprocessing(frames, dynamic_crop=False):
     v = []
     for i in range(len(frames)):
         frame_d = cv2.resize(frames[i].copy(), (224, 224), interpolation=cv2.INTER_AREA)
@@ -70,7 +70,7 @@ def preprocessing(frames, dynamic_crop=True):
     v = np.array(v)
     flows = getOpticalFlow(v)
 
-    result = np.zeros((len(flows), 224, 224, 5))
+    result = np.zeros((len(flows), 224, 224, 5), dtype=np.float32)
     result[...,:3] = v
     result[...,3:] = flows
     
