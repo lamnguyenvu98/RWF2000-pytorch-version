@@ -1,60 +1,15 @@
 import ray
 from ray import serve
-from ray.serve import Application
-from src.utils import preprocessing
-from src.data.augmentation import Normalize
 
-import openvino.runtime.opset11 as ov
-from openvino.runtime import Core, Type, Output, Layout, layout_helpers
-from openvino.preprocess import PrePostProcessor, ColorFormat, ResizeAlgorithm
-from openvino.runtime.utils.decorators import custom_preprocess_function
-import numpy as np
+from openvino.runtime import Core, Type, Layout
+from openvino.preprocess import PrePostProcessor
+from src.utils import custom_normalizer, custom_softmax, preprocessing
 
 # from fastapi import FastAPI
 
 import numpy as np
 import pickle
 from starlette.requests import Request
-
-INT_MAX = np.iinfo(np.int32).max
-
-def mean(node, axes: list, keep_dims: bool = True):
-    return ov.reduce_mean(node, reduction_axes=axes, keep_dims=keep_dims)
-
-def slicing(node, start: list, stop: list, step: list):
-    start_ind = ov.constant(start, dtype=np.int32)
-    stop_ind = ov.constant(stop, dtype=np.int32)
-    step_ind = ov.constant(step, dtype=np.int32)
-    return ov.slice(node, start=start_ind, stop=stop_ind, step=step_ind)
-
-def std(node, mean, axes):
-    square_diff = ov.squared_difference(node, mean)
-    # ax = ov.constant(axes, dtype=np.int32)
-    return ov.sqrt(ov.reduce_mean(square_diff, reduction_axes=axes, keep_dims=True))
-
-def normalize(node, mean, std):
-    return ov.divide(ov.subtract(node, mean), std)
-
-@custom_preprocess_function
-def custom_normalizer(output: Output):
-    rgb_slice = slicing(output, start=[0,0,0,0,0], stop=[INT_MAX,3,64,224,224], step=[1,1,1,1,1])
-    flow_slice = slicing(output, start=[0,3,0,0,0], stop=[INT_MAX,5,64,224,224], step=[1,1,1,1,1])
-
-    mean_rgb = mean(rgb_slice, axes=[1, 2, 3, 4], keep_dims=True)
-    mean_flow = mean(flow_slice, axes=[1, 2, 3, 4], keep_dims=True)
-    
-    std_rgb = std(rgb_slice, mean_rgb, axes=[1, 2, 3, 4])
-    std_flow = std(flow_slice, mean_flow, axes=[1, 2, 3, 4])
-
-
-    norm_rgb = normalize(rgb_slice, mean_rgb, std_rgb)
-    norm_flow = normalize(flow_slice, mean_flow, std_flow)
-
-    return ov.concat([norm_rgb, norm_flow], axis=1)
-
-@custom_preprocess_function
-def custom_softmax(output: Output):
-    return ov.softmax(output, axis=1)
 
 @serve.deployment(num_replicas=1, ray_actor_options={"num_cpus": 4, "num_gpus": 0}, route_prefix='/predict')
 class RWF2000_Deployment:
@@ -76,25 +31,33 @@ class RWF2000_Deployment:
         
         self.classnames = ['Fight', 'NonFight']
     
-    def predict(self, frames: np.ndarray) -> dict:
-        in0 = preprocessing(frames=frames, dynamic_crop=False)
-        in0 = np.expand_dims(in0, axis=0) # (5, 64, 224, 224) => (1, 5, 64, 224, 224)
-
+    def predict(self, in0: np.ndarray) -> list:        
         # Run inference on the input image.
         out = self.model([in0])["output"]
-        best  = out.argmax(axis=1)[0]
-        pred_class = self.classnames[best]
-        scores = out[:, best]
-        return {"Pred_class": pred_class, "Scores:": "{:.2f}".format(scores[0])}
+        best_ids  = out.argmax(axis=1)
+        scores = out.max(axis=1)
+        
+        results = list()
+        
+        for i, (best, score) in enumerate(zip(best_ids, scores)):
+            results.append({
+                "batch_idx": i,
+                "Class predict": self.classnames[best],
+                "Scores": "{:.2f}".format(score)
+            })
+        
+        return results
 
     async def __call__(self, http_request: Request):
         data = await http_request.body()
-        frames: np.ndarray = pickle.loads(data)
-        result = self.predict(frames)
+        frames = pickle.loads(data)
+        in0 = [preprocessing(frames=frame, dynamic_crop=False) for frame in frames]
+        in0 = np.stack(in0)
+        result = self.predict(in0)
         return result
 
 # def main():
-def app_builder(args: dict[str, str]) -> Application:
+def app_builder(args: dict[str, str]) -> serve.Application:
      return RWF2000_Deployment.bind(args["model_ir_path"], args["device"], args["num_threads"])
 
 # app = RWF2000_Deployment.bind(model_ir_path="model_dir/openvino/FGN.xml", device="CPU", num_threads=4)

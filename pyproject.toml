@@ -20,5 +20,6 @@ packages=["src"]
 include-package-data=true
 
 [project.scripts]
-export-script = "src.export_script:main"
-build-dataset = "src.data.build_dataset:main"
+export-script = "src.tools.export_script:main"
+build-dataset = "src.tools.build_dataset:main"
+train-model = "src.models.train:main"

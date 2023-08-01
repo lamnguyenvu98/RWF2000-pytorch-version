@@ -3,13 +3,14 @@ from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.loggers import NeptuneLogger
 import neptune
 from src.models import FGN
-from src.config import read_args
+from src.utils import read_args
 from src.data import RWF2000DataModule
 from src.models.callbacks import ModelMetricsCallback
 import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', '-c', required=True, type=str, help="path to yaml config file")
+parser.add_argument('--logs', action="store_false", help="Log to neptune AI")
 ar = parser.parse_args()
 
 args = read_args(ar.config)
@@ -28,14 +29,7 @@ val_acc_callback = ModelCheckpoint(
 
 model_metric_callback = ModelMetricsCallback(num_classes = 2, task = "multiclass")
 
-# last_ckp = ModelCheckpoint(
-#     dirpath = args.DIR.CHECKPOINT_DIR,
-#     filename = "fgn-lastest-{epoch:02d}",
-#     every_n_epochs = 1
-# )
-
-print()
-if (args.NEPTUNE_LOGGER.API_TOKEN is not None) or (args.NEPTUNE_LOGGER.PROJECT is not None):
+if ar.logs:
     # Initialize neptune AI
     run = neptune.init_run(
         api_token=args.NEPTUNE_LOGGER.API_TOKEN,
@@ -76,14 +70,15 @@ trainer = Trainer(
     logger=logger
 )
 
-# log model summary
-# neptune_logger.log_model_summary(model=train_model.model, max_depth=-1)
-
 # # log params
-if logger:
-    logger.log_hyperparams(params=dict(train_model.hparams))
+# if logger:
+#     logger.log_hyperparams(params=dict(train_model.hparams))
 
-if args.SETTINGS.RESUME:
-    trainer.fit(train_model, datamodule=datamodule, ckpt_path=args.DIR.RESUME_CHECKPOINT)
-else:
-    trainer.fit(train_model, datamodule=datamodule)
+def main():
+    if args.SETTINGS.RESUME:
+        trainer.fit(train_model, datamodule=datamodule, ckpt_path=args.DIR.RESUME_CHECKPOINT)
+    else:
+        trainer.fit(train_model, datamodule=datamodule)
+
+if __name__ == '__main__':
+    main()

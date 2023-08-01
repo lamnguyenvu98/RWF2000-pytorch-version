@@ -6,10 +6,15 @@ import imageio.v3 as iio
 import pickle
 import json
 import time
+import numpy as np
+# video_path = '../videos/_q5Nwh4Z6ao_3.avi'
 
-video_path = '../videos/_q5Nwh4Z6ao_3.avi'
+# frames = iio.imread(video_path, extension='.avi')[:64]
 
-frames = iio.imread(video_path, extension='.avi')[:64]
+frames = [np.random.rand(64, 224, 224, 3).astype(np.uint8), 
+          np.random.rand(64, 224, 224, 3).astype(np.uint8),
+          np.random.rand(64, 224, 224, 3).astype(np.uint8),
+          np.random.rand(64, 224, 224, 3).astype(np.uint8)]
 
 arr = pickle.dumps(frames)
 

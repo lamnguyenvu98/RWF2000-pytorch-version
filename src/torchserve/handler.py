@@ -47,7 +47,9 @@ class ModelHandler(BaseHandler):
                 self.class_names = json.load(f)
             logging.info(f'Successful loaded mapping file')
         
-        self.model = TrainingModel().load_from_checkpoint(model_ckp_path)
+        # self.model = FlowGatedNetwork().load_from_checkpoint(model_ckp_path)
+        self.model = self.load_ckp_from_lightning(torch_model=FlowGatedNetwork(),
+                                                  pl_checkpoint_path=model_ckp_path)
         self.initialized = True
     
     def preprocess(self, data):
@@ -104,6 +106,14 @@ class ModelHandler(BaseHandler):
         model_input = self.preprocess(data)
         output = self.inference(model_input)
         return self.postprocess(output)
+    
+    def load_ckp_from_lightning(self, torch_model, pl_checkpoint_path):
+        pl_checkpoint = torch.load(os.path.abspath(pl_checkpoint_path), map_location="cpu")['state_dict']
+        model_ckp = torch_model.state_dict()
+        for k, v in model_ckp.items():
+            model_ckp[k] = pl_checkpoint['model.' + k]
+        torch_model.load_state_dict(model_ckp)
+        return torch_model
         
         
         

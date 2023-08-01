@@ -22,95 +22,26 @@ class FGN(LightningModule):
         self.gamma                = gamma
         
         self.loss_function        = nn.CrossEntropyLoss()
-        # self.train_metrics        = torchmetrics.Accuracy(num_classes=2, task="multiclass")
-        # self.val_metrics          = torchmetrics.Accuracy(num_classes=2, task="multiclass")
-        # self.test_metric_acc      = torchmetrics.Accuracy(num_classes=2, task="multiclass")
         # self._precision           = torchmetrics.Precision(num_classes=2, task="multiclass", ignore_index=1)
         # self.recall               = torchmetrics.Recall(num_classes=2, task="multiclass", ignore_index=1)
-        # self.val_cfm              = ConfusionMatrix()
         
-        # self.training_step_outputs = []
-        # self.validation_step_outputs = []
-
-        self.model                = FlowGatedNetwork()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-      return self.model(x)
-
-    # def on_train_epoch_start(self):
-    #    self.optimizers().param_groups[0]['lr'] = self.lr_schedulers().get_last_lr()[0]
+        self.model                = torch.compile(FlowGatedNetwork())
 
     def training_step(self, batch, batch_idx):
         X, y = batch
-        preds = self(X)
+        preds = self.model(X)
         batch_loss = self.loss_function(preds, y)
-        # acc = self.train_metrics(preds.softmax(dim=-1), y)
-        # lr = self.optimizers().param_groups[0]['lr']
-        # self.log("batch_acc", acc, prog_bar=True, logger=False)
-        # self.log("lr", lr, prog_bar=True, logger=False)
         loss = batch_loss * self.trainer.accumulate_grad_batches
         outputs = {'loss': loss, "predict_y": preds, "gt_y": y}
-        # self.training_step_outputs.append(outputs)
         return outputs
-
-    # def on_train_epoch_end(self):
-    #     avg_loss = torch.stack([x['loss'] for x in self.training_step_outputs]).mean()
-    #     mean_acc = self.train_metrics.compute()
-    #     lr = self.optimizers().param_groups[0]['lr']
-    #     self.log("train_acc", mean_acc)
-    #     self.log("train_loss", avg_loss)
-    #     self.log("lr", lr, prog_bar=True)
-    #     self.train_metrics.reset()
-    #     self.training_step_outputs.clear()
 
     def validation_step(self, batch, batch_idx):
         X, y = batch
-        preds = self(X)
+        preds = self.model(X)
         loss = self.loss_function(preds, y)
-        # acc = self.val_metrics(preds.softmax(dim=-1), y)
-        # self.log("val_b_loss", batch_loss, prog_bar=True, logger=False)
-        # self.log("val_b_acc", acc, prog_bar=True, logger=False)
         outputs = {'loss': loss, 'predict_y': preds, 'gt_y': y}
-        # self.validation_step_outputs.append(outputs)
         return outputs
 
-    # def on_validation_epoch_end(self):
-    #     outputs = self.validation_step_outputs
-    #     loss = torch.stack([x['batch_val_loss'] for x in self.validation_step_outputs]).mean()
-    #     mean_acc = self.val_metrics.compute()
-    #     self.log("val_loss", loss)
-    #     self.log("val_acc", mean_acc)
-        
-    #     # Draw Confusion Matrix
-    #     y_true = torch.cat([x['gt'] for x in self.validation_step_outputs])
-    #     y_preds = torch.cat([x['pred'] for x in self.validation_step_outputs])
-    #     fig = plt.figure()
-    #     self.val_cfm(y_preds, y_true)
-    #     self.val_cfm._plot()
-    #     if self.logger is not None:
-    #         self.logger.experiment['CFM/ConfusionMatrix_{}'.format(self.current_epoch)].upload(File.as_image(fig))
-    #     self.val_metrics.reset()
-
-    #     self.validation_step_outputs.clear()
-
-    # def test_step(self, batch, batch_idx):
-    #     X, y = batch
-    #     preds = self(X)
-    #     batch_loss = self.loss_function(preds, y)
-    #     acc = self.test_metric_acc(preds.softmax(dim=-1), y)
-    #     return {'gt': y, 'pred': preds.softmax(dim=-1).argmax(dim=-1)}
-
-    # def on_test_epoch_end(self, outputs):
-    #     cfm = ConfusionMatrix()
-    #     y_true = torch.cat([x['gt'] for x in outputs])
-    #     y_preds = torch.cat([x['pred'] for x in outputs])
-    #     result = cfm(y_preds, y_true)
-    #     cfm._plot()
-    #     plt.show()
-    #     mean_acc = self.test_metric_acc.compute()
-    #     self.log('test_acc', mean_acc, logger=False)
-    #     self.test_metric_acc.reset()
-    #     return {'test_acc': mean_acc}
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)
