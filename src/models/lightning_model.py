@@ -25,7 +25,10 @@ class FGN(LightningModule):
         # self._precision           = torchmetrics.Precision(num_classes=2, task="multiclass", ignore_index=1)
         # self.recall               = torchmetrics.Recall(num_classes=2, task="multiclass", ignore_index=1)
         
-        self.model                = torch.compile(FlowGatedNetwork())
+        self.model                = FlowGatedNetwork()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
 
     def training_step(self, batch, batch_idx):
         X, y = batch
@@ -41,7 +44,6 @@ class FGN(LightningModule):
         loss = self.loss_function(preds, y)
         outputs = {'loss': loss, 'predict_y': preds, 'gt_y': y}
         return outputs
-
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=self.momentum, weight_decay=self.weight_decay, nesterov=True)

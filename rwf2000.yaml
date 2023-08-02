@@ -15,13 +15,10 @@ VALIDATION:
 SETTINGS:
   ACCELERATOR: "gpu"
   DEVICES: 1
-  PRECISION: 16-mixed
+  PRECISION: "16-mixed"
   RESUME: False
-NEPTUNE_LOGGER:
-  API_TOKEN:
-  PROJECT:
-  WITH_ID:
-  TAGS:
+LOGGER:
+  LOG_N_STEP: 50
 DIR:
   RESUME_CHECKPOINT: '/content/log_folder/checkpoints/last.ckpt'
   CHECKPOINT_DIR: '/content/log_folder/checkpoints/'

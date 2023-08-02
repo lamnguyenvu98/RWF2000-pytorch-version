@@ -1,0 +1,6 @@
+SAVE_DIR: 
+NAME: "lightning_logs"
+VERSION:
+LOG_GRAPH: False
+PREFIX: ""
+SUB_DIR:

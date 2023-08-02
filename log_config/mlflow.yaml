@@ -1,0 +1,8 @@
+EXPERIMENT_NAME: "lightning_logs"
+RUN_NAME:
+TAGS:
+SAVE_DIR: "./mlruns"
+LOG_MODEL: False
+PREFIX: ""
+ARTIFACT_LOCATION:
+RUN_ID:

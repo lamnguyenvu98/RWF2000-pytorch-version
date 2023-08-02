@@ -48,12 +48,14 @@ def main():
         For example:\n
         \texport-script onnx --help"""
     )
-    base_parser  = argparse.ArgumentParser(add_help=False)
-    base_parser.add_argument('--out-dir', '-d', required=True, type=str, help='Path of directory to export model')
-    base_parser.add_argument('--checkpoint', '-c', required=True, type=str, help='Path to checkpoint')
-    base_parser.add_argument("--name", "-n", required=False, type=str, help="[Optional] Name of torchscript/onnx file. It will take the name of checkpoint file by default")
     
-    subparsers = parser.add_subparsers(dest='type', help='Sub-commands')
+    base_parser  = argparse.ArgumentParser(add_help=False)
+
+    parser.add_argument('--out-dir', '-d', required=True, type=str, help='Path of directory to export model')
+    parser.add_argument('--checkpoint', '-c', required=True, type=str, help='Path to checkpoint')
+    parser.add_argument("--name", "-n", required=False, type=str, help="[Optional] Name of torchscript/onnx file. It will take the name of checkpoint file by default")
+
+    subparsers = parser.add_subparsers(dest='type', help='Sub-commands', required=True)
     subparsers.add_parser('torchscript', parents=[base_parser], help="Export checkpoint to torchscript")
     onnx_parser = subparsers.add_parser('onnx', parents=[base_parser], help="Export checkpoint to ONNX")
     onnx_parser.add_argument("--opset-version", "-op", default=11, type=int, help="Opset version of ONNX")

@@ -1,16 +1,33 @@
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch import Trainer, seed_everything
-from lightning.pytorch.loggers import NeptuneLogger
+from lightning.pytorch.loggers import NeptuneLogger, TensorBoardLogger, MLFlowLogger
 import neptune
 from src.models import FGN
 from src.utils import read_args
 from src.data import RWF2000DataModule
 from src.models.callbacks import ModelMetricsCallback
 import argparse
+import sys
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--config', '-c', required=True, type=str, help="path to yaml config file")
-parser.add_argument('--logs', action="store_false", help="Log to neptune AI")
+parser = argparse.ArgumentParser(
+    prog="Training FGN model",
+    epilog="Execute <command> --help for more information. Execute <command> <sub-commands> --help for more information about sub-command"
+)
+
+required = parser.add_argument_group("required arguments")
+required.add_argument('--config', '-c', required=True, type=str, help="path to yaml config file")
+
+optional = parser.add_argument_group("optional arguments", description="Optional arguments for loggers: Neptune AI, MLFlow, TensorBoard")
+
+optional.add_argument('--loggers', 
+                      required=False, 
+                      choices=["neptune", "tensorboard", "mlflow"], 
+                      type=str,
+                      help="Log to neptune AI")
+optional.add_argument('--log-config', 
+                      required="--loggers" in sys.argv,
+                      type=str,
+                      help="Path to log config")
 ar = parser.parse_args()
 
 args = read_args(ar.config)
@@ -29,21 +46,49 @@ val_acc_callback = ModelCheckpoint(
 
 model_metric_callback = ModelMetricsCallback(num_classes = 2, task = "multiclass")
 
-if ar.logs:
-    # Initialize neptune AI
-    run = neptune.init_run(
-        api_token=args.NEPTUNE_LOGGER.API_TOKEN,
-        project=args.NEPTUNE_LOGGER.PROJECT,
-        tags=args.NEPTUNE_LOGGER.TAGS,
-        with_id=args.NEPTUNE_LOGGER.WITH_ID # This is to resume last run
-    )
+logger = False
 
-    logger = NeptuneLogger(
-        run=run
-    )
-
-else:
+if ar.logger is None:
     logger = False
+else:
+    log_args = read_args(ar.log_config)
+    if ar.logger == "neptune":
+        # Initialize neptune AI
+        run = neptune.init_run(
+            api_token=log_args.API_TOKEN,
+            project=log_args.PROJECT,
+            tags=log_args.TAGS,
+            with_id=log_args.WITH_ID # This is to resume last run 
+        )
+
+        logger = NeptuneLogger(
+            run=run,
+            log_model_checkpoints=log_args.LOG_MODEL_CHECKPOINT,
+            prefix=log_args.PREFIX
+        )
+    
+    elif ar.logger == "tensorboard":
+        logger = TensorBoardLogger(
+            save_dir=log_args.SAVE_DIR,
+            name=log_args.NAME,
+            version=log_args.VERSION,
+            log_graph=log_args.LOG_GRAPH,
+            prefix=log_args.PREFIX,
+            sub_dir=log_args.SUB_DIR
+        )
+        
+    elif ar.logger == "mlflow":
+        logger = MLFlowLogger(
+            experiment_name=log_args.EXPERIMENT_NAME,
+            run_name=log_args.RUN_NAME,
+            tags=log_args.TAGS,
+            save_dir=log_args.SAVE_DIR,
+            log_model=log_args.LOG_MODEL,
+            prefix=log_args.PREFIX,
+            artifact_location=log_args.ARTIFACT_LOCATION,
+            run_id=log_args.RUN_ID
+        )
+        
 
 train_model = FGN(
     learning_rate = args.TRAIN.LEARNING_RATE, 
@@ -67,7 +112,8 @@ trainer = Trainer(
     accumulate_grad_batches=args.TRAIN.ACCUMULATE_BATCH,
     precision=args.SETTINGS.PRECISION,
     callbacks=[val_acc_callback, model_metric_callback],
-    logger=logger
+    logger=logger,
+    log_every_n_steps=args.LOGGER.LOG_N_STEP
 )
 
 # # log params

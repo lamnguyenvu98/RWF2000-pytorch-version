@@ -5,6 +5,7 @@ from lightning.pytorch.utilities.types import STEP_OUTPUT
 
 import torch
 import torchmetrics
+import numpy as np
 
 from neptune.types import File
 
@@ -62,12 +63,26 @@ class ModelMetricsCallback(Callback):
         val_epoch_accuracy = self.val_metrics.compute()        
         fig, ax = self.val_cfm.plot(labels=["Fight", "NonFight"])
         
+
         pl_module.log("val_epoch_loss", val_epoch_loss, prog_bar=False, logger=True)
         pl_module.log("val_epoch_accuracy", val_epoch_accuracy, prog_bar=False, logger=True)
 
-        if pl_module.logger:
+        if type(pl_module.logger).__name__ == "NeptuneLogger":
             pl_module.logger.experiment['CFM/ConfusionMatrix_{:02d}'.format(pl_module.current_epoch)].upload(File.as_image(fig))
+        elif type(pl_module.logger).__name__ == "TensorBoardLogger":
+            cfm_image = self.convert_fig_to_array(fig)
+            cfm_image = np.expand_dims(cfm_image, axis=0)
+            pl_module.logger.experiment.summary.image("Confusion Matrix", cfm_image, step=pl_module.current_epoch)
         
+
         self.val_loss_metrics.reset()
         self.val_metrics.reset()
         self.val_cfm.reset()
+
+    def convert_fig_to_array(self, fig):
+        canvas = fig.canvas
+        canvas.draw()
+        width, height = canvas.get_width_height()
+        image_array = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+        image_array = image_array.reshape(height, width, 3)
+        return image_array
