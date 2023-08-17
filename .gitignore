@@ -1,5 +1,6 @@
 __pycache__
 env
+.env
 src/torchserve/logs
 src/torchserve/model_store
 videos
@@ -13,3 +14,4 @@ inference.ipynb
 dist
 ncnn_models
 FlowGatedNetwork.egg-info
+.directory
